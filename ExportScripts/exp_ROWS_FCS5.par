@@ -1,0 +1,13 @@
+﻿buffer=1000000000
+compress=y
+constraints=y
+direct=y
+grants=y
+indexes=y
+rows=y
+statistics=none
+file=/tmp/exp_ROWS_FCS5.dmp
+log=/tmp/exp_ROWS_FCS5.log
+tables=(
+fcs.audit_log
+)

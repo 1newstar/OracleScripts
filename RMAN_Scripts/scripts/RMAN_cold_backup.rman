@@ -1,0 +1,37 @@
+shutdown immediate;
+startup mount;
+
+run {
+	allocate channel disk_1
+	device type DISK
+	format '&1\%ORACLE_SID%\%U';
+
+	allocate channel disk_2
+	device type DISK
+	format '&1\%ORACLE_SID%\%U';
+
+	allocate channel disk_3
+	device type DISK
+	format '&1\%ORACLE_SID%\%U';
+
+	allocate channel disk_4
+	device type DISK
+	format '&1\%ORACLE_SID%\%U';
+
+	allocate channel disk_5
+	device type DISK
+	format '&1\%ORACLE_SID%\%U';
+
+	backup 
+		section size 150m
+		full database
+		tag 'cold_backup';
+
+	release channel disk_1;
+	release channel disk_2;
+	release channel disk_3;
+	release channel disk_4;
+	release channel disk_5;
+}
+
+alter database open;

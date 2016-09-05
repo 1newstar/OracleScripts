@@ -1,0 +1,11 @@
+register database;
+
+run {
+  configure controlfile autobackup on;
+  configure backup optimization on;
+  configure retention policy to recovery window of 7 days;
+  configure archivelog deletion policy to backed up 2 times to disk;
+}
+
+show all;
+exit
