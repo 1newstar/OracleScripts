@@ -1,9 +1,0 @@
-﻿buffer=1000000000
-constraints=y
-grants=y
-indexes=y
-rows=n
-statistics=none
-owner=(CMTEMP,FCS,ITOPS,LEEDS_CONFIG,OEIC_RECALC,ONLOAD,UVSCHEDULER)
-file=/tmp/exp_NOROWS.dmp
-log=/tmp/exp_NOROWS.log
