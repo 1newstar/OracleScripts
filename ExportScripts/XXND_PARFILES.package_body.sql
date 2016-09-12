@@ -2598,7 +2598,7 @@ begin
     
     -- We have our list of existing tables, all happily waiting
     -- to be written to an export parameter file. However, some
-    -- tables are simply not wanted in thew new regime. This is
+    -- tables are simply not wanted in the new regime. This is
     -- where we get rid of the unloved tables from the above lists.
     tableIndexer := unLovedTables.first;
     
@@ -2611,43 +2611,50 @@ begin
         if (fcs1Tables.exists(currentTable)) then
             fcs1Tables.delete(unLovedTables(tableIndexer));
             tableIndexer := unLovedTables.next(tableIndexer);
-            continue;
+            --continue;
+            goto end_loop;
         end if;
 
         if (fcs2Tables.exists(currentTable)) then
             fcs2Tables.delete(unLovedTables(tableIndexer));
             tableIndexer := unLovedTables.next(tableIndexer);
-            continue;
+            --continue;
+            goto end_loop;
         end if;
 
         if (fcs3Tables.exists(currentTable)) then
             fcs3Tables.delete(unLovedTables(tableIndexer));
             tableIndexer := unLovedTables.next(tableIndexer);
-            continue;
+            --continue;
+            goto end_loop;
         end if;
 
         if (fcs4Tables.exists(currentTable)) then
             fcs4Tables.delete(unLovedTables(tableIndexer));
             tableIndexer := unLovedTables.next(tableIndexer);
-            continue;
+            --continue;
+            goto end_loop;
         end if;
 
         if (fcs5Tables.exists(currentTable)) then
             fcs5Tables.delete(unLovedTables(tableIndexer));
             tableIndexer := unLovedTables.next(tableIndexer);
-            continue;
+            --continue;
+            goto end_loop;
         end if;
 
         if (fcs6Tables.exists(currentTable)) then
             fcs6Tables.delete(unLovedTables(tableIndexer));
             tableIndexer := unLovedTables.next(tableIndexer);
-            continue;
+            --continue;
+            goto end_loop;
         end if;
 
         if (fcs7Tables.exists(currentTable)) then
             fcs7Tables.delete(unLovedTables(tableIndexer));
             tableIndexer := unLovedTables.next(tableIndexer);
-            continue;
+            --continue;
+            goto end_loop;
         end if;
 
         -- If we get here, the unlovedTable isn't in any of the
@@ -2656,58 +2663,13 @@ begin
         -- Famous last words.
         -- However, we will continue searching for others.
         tableIndexer := unLovedTables.next(tableIndexer);
-
+        
+        -- 9i can't do "continue" so we need a label and a goto.
+        -- And a goto label needs an executable statement, hence NULL;
+    <<end_loop>>
+        null;
+        
     end loop;
-
-
-
-
-
-/* CRAP Stuff from here on down!
-
-    tableIndexer := fcs1Tables.first;
-    while (tableIndexer is not null) loop
-        fcs8Tables.delete(fcs1Tables(tableIndexer));
-        tableIndexer := fcs1Tables.next(tableIndexer);
-    end loop;
-
-    tableIndexer := fcs2Tables.first;
-    while (tableIndexer is not null) loop
-        fcs8Tables.delete(fcs2Tables(tableIndexer));
-        tableIndexer := fcs2Tables.next(tableIndexer);
-    end loop;
-
-    tableIndexer := fcs3Tables.first;
-    while (tableIndexer is not null) loop
-        fcs8Tables.delete(fcs3Tables(tableIndexer));
-        tableIndexer := fcs3Tables.next(tableIndexer);
-    end loop;
-
-    tableIndexer := fcs4Tables.first;
-    while (tableIndexer is not null) loop
-        fcs8Tables.delete(fcs4Tables(tableIndexer));
-        tableIndexer := fcs4Tables.next(tableIndexer);
-    end loop;
-
-    tableIndexer := fcs5Tables.first;
-    while (tableIndexer is not null) loop
-        fcs8Tables.delete(fcs5Tables(tableIndexer));
-        tableIndexer := fcs5Tables.next(tableIndexer);
-    end loop;
-
-    tableIndexer := fcs6Tables.first;
-    while (tableIndexer is not null) loop
-        fcs8Tables.delete(fcs6Tables(tableIndexer));
-        tableIndexer := fcs6Tables.next(tableIndexer);
-    end loop;
-
-    tableIndexer := fcs7Tables.first;
-    while (tableIndexer is not null) loop
-        fcs8Tables.delete(fcs7Tables(tableIndexer));
-        tableIndexer := fcs7Tables.next(tableIndexer);
-    end loop;
-*/    
-    
 
 end;
 /    
