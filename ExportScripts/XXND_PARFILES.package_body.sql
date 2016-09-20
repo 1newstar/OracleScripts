@@ -27,6 +27,7 @@ create or replace package body xxnd_parfiles as
         pl(yesIndexes);
         pl(yesRows);
         pl(noStatistics);
+        pl(yesConsistent);
     end;
     
 
@@ -163,6 +164,16 @@ create or replace package body xxnd_parfiles as
         buildTables(fcs7Tables);
     end;
     
+    procedure buildFCS8(iFolder in varchar2) is
+        dumpFile constant varchar2(30) := 'exp_ROWS_FCS8.dmp';
+        logFile constant varchar2(30) := 'exp_ROWS_FCS8.log';
+    begin
+        buildCommon();
+        pl('file=' || iFolder || '/' || dumpFile);
+        pl('log=' || iFolder || '/' || logFile);
+        buildTables(fcs8Tables);
+    end;
+    
 -- Code to initialise the various lists when this package is loaded.
 -- Each list is indexed by it's own value, which makes deleting
 -- and finding a lot easier, if not much harder to type when doing
@@ -175,7 +186,70 @@ begin
     -- other.
     -- *************************************************************
 
+    -- First we build a list of the TAKEON% schema names plus all those 
+    -- that are not LOCKED and EXPIRED, which are not Oracle created users,
+    -- and which own objects. We need those.  
+    -- We have also hard coded the following users, in the package secification:
+    -- CMTEMP,FCS,ITOPS,LEEDS_CONFIG,OEIC_RECALC,ONLOAD and UVSCHEDULER   
 
+    for takeon in (
+        select username 
+        from dba_users 
+        where username like 'TAKEON%'        
+        --
+        union 
+        --
+        -- These are owners of objects. With OPEN accounts.
+        SELECT distinct(owner) 
+        FROM dba_objects o, dba_users u 
+        WHERE
+            o.owner = u.username
+            -- Exclude expired and locked accounts.
+            and u.account_status not like 'EXPIRED _ LOCKED'
+            -- Exclude APEX users, including the FLOWS ones.
+            and o.owner not LIKE 'APEX%'
+            and o.owner not like 'FLOWS\_%' escape '\'
+            -- We don't want AURORA users either.
+            and o.owner not like 'AURORA$%'
+            -- Nor do we care about this one.
+            and o.owner <> 'DISCADMIN'
+            and o.owner NOT IN 
+                (       
+                        -- Hard coded users that we aalways export.
+                        'CMTEMP', 'FCS', 'ITOPS', 'LEEDS_CONFIG', 'OEIC_RECALC', 
+                        'ONLOAD', 'UVSCHEDULER',
+                        -- Pre-Defined Administrative Accounts.
+                         'ANONYMOUS'  ,'APPQOSSYS' ,'CSMIG'         ,'CTXSYS'       
+                        ,'DBSNMP'     ,'DMSYS'     ,'EXFSYS'        ,'LBACSYS'      
+                        ,'MDSYS'      ,'MGMT_VIEW' ,'ODM'           ,'ODM_MTR'
+                        ,'OLAPSYS'    ,'OWBSYS'    ,'OWBSYS_AUDIT'  ,'ORACLE_OCM'  
+                        ,'ORDPLUGINS' ,'ORDSYS'    ,'OUTLN'         ,'PERFSTAT'    
+                        ,'SI_INFORMTN_SCHEMA'      ,'SNAPADMIN'     ,'SYS'
+                        ,'SYSMAN'    ,'SYSTEM'     ,'TRACESVR'      ,'TSMSYS'     
+                        ,'WKSYS'     ,'WKUSER'     ,'WMSYS'         ,'XDB'
+                        -- Pre-Defined Non-Administrative Accounts
+                        ,'AWR_STAGE','DIP'
+                        ,'MDDATA'   ,'ORACLE_OCM' ,'ORDDATA'     ,'PUBLIC'   
+                        ,'SPATIAL_CSW_ADMIN_USER' ,'SPATIAL_WFS_ADMIN_USR' 
+                        ,'WKPROXY' ,'WK_TEST'     ,'XS$NULL'
+                        -- Default Sample Schema User Accounts (Why are these
+                        -- in a production databasde please?)
+                        ,'SCOTT'  ,'ADAMS' ,'JONES'    ,'CLARK' ,'BLAKE' ,'DEMO'
+                        ,'BI'     ,'HR'    ,'IX'       ,'OE'    ,'PM'    ,'QS'    ,'SH' 
+                        ,'QS_ADM' ,'QS_CB' ,'QS_CBADM' ,'QS_CS' ,'QS_ES' ,'QS_OS' ,'QS_WS' 
+                        -- Third party product accounts.
+                        ,'TOAD','SPHINXCST','JLM'
+                )
+        ORDER BY username
+    )
+    loop
+        allOwners := allOwners || takeon.username || ',';
+    end loop;
+    
+    allOwners := '(' || rtrim(alwaysOwners || ',' || allOwners, ',') || ')';
+    -- dbms_output.put_line(allOwners);
+    
+    
     -- *************************************************************
     -- *************************************************************
     -- **                                                         **
@@ -625,6 +699,12 @@ begin
     unLovedTables('valhead_temp') := 'valhead_temp';
     unLovedTables('valxrate_temp') := 'valxrate_temp';
 
+    -- Category MV - Table created in 9i for Materialised views.
+    --               MVIEWs are recreated in 11g, so we don't need these. 
+
+    unLovedTables('investor_cat_mv') := 'investor_cat_mv';
+    unLovedTables('ordtran_mv') := 'ordtran_mv';
+        
     
     -- ****************************************************************
     -- The following lists define the tables that might be in each
@@ -655,13 +735,28 @@ begin
     fcs3Tables('ordtran') := 'ordtran';
     fcs4Tables('stp_messages') := 'stp_messages';
     fcs5Tables('audit_log') := 'audit_log';
-    
+
     -- Getting harder now, a few tables...
+    fcs6Tables('alert_log') := 'alert_log';
+    fcs6Tables('audit_log_image') := 'audit_log_image';
+    fcs6Tables('divpay') := 'divpay';
+    fcs6Tables('emxtrans') := 'emxtrans';
+    fcs6Tables('eventlog') := 'eventlog';
     fcs6Tables('glacper') := 'glacper';
     fcs6Tables('glposts') := 'glposts';
     fcs6Tables('pso_investor_lookup') := 'pso_investor_lookup';
     fcs6Tables('renewal_commission') := 'renewal_commission'; 
     fcs6Tables('rl_valuation1') := 'rl_valuation1';
+
+
+    -- BEWARE: The next table must be in mixed case. But only the
+    --         table name, the collection index is still in lower case.
+    --         The tablename must be wrapped in 3 (count them) double quotes.
+    fcs8Tables('ukfatcasubmissionfire98_tab') := '"""UKFATCASubmissionFIRe98_TAB"""';
+    fcs8Tables('email_attachment') := 'email_attachment';
+    
+    
+
 
     -- And now, a number of tables ...
     fcs7Tables('allocate') := 'allocate';
@@ -760,7 +855,6 @@ begin
     fcs2Tables('adviser_charge_supp') := 'adviser_charge_supp';
     fcs2Tables('alert_command') := 'alert_command';
     fcs2Tables('alert_config') := 'alert_config';
-    fcs2Tables('alert_log') := 'alert_log';
     fcs2Tables('alert_notification') := 'alert_notification';
     fcs2Tables('alert_rule') := 'alert_rule';
     fcs2Tables('alert_trigger') := 'alert_trigger';
@@ -783,7 +877,6 @@ begin
     fcs2Tables('arch_cru_pay_log') := 'arch_cru_pay_log';
     fcs2Tables('artefact_revoke_reason') := 'artefact_revoke_reason';
     fcs2Tables('audit_log_detail_arch') := 'audit_log_detail_arch';
-    fcs2Tables('audit_log_image') := 'audit_log_image';
     fcs2Tables('audit_policies') := 'audit_policies';
     fcs2Tables('audit_tables') := 'audit_tables';
     fcs2Tables('audit_table_columns') := 'audit_table_columns';
@@ -1034,7 +1127,6 @@ begin
     fcs2Tables('dividend_702_43466') := 'dividend_702_43466';
     fcs2Tables('dividend_tax_rate') := 'dividend_tax_rate';
     fcs2Tables('dividend_tax_rate_historic') := 'dividend_tax_rate_historic';
-    fcs2Tables('divpay') := 'divpay';
     fcs2Tables('divpay_173') := 'divpay_173';
     fcs2Tables('divpay_536_43466') := 'divpay_536_43466';
     fcs2Tables('divpay_702_43466') := 'divpay_702_43466';
@@ -1054,7 +1146,6 @@ begin
     fcs2Tables('emailaddr') := 'emailaddr';
     fcs2Tables('emailparenttype') := 'emailparenttype';
     fcs2Tables('emailtype') := 'emailtype';
-    fcs2Tables('email_attachment') := 'email_attachment';
     fcs2Tables('email_domains') := 'email_domains';
     fcs2Tables('email_format') := 'email_format';
     fcs2Tables('email_global_config') := 'email_global_config';
@@ -1068,7 +1159,6 @@ begin
     fcs2Tables('emxorderdef') := 'emxorderdef';
     fcs2Tables('emxoriginator') := 'emxoriginator';
     fcs2Tables('emxprovider') := 'emxprovider';
-    fcs2Tables('emxtrans') := 'emxtrans';
     fcs2Tables('emxvalreq') := 'emxvalreq';
     fcs2Tables('emx_fund_ifa_exceptions') := 'emx_fund_ifa_exceptions';
     fcs2Tables('emx_provider_details') := 'emx_provider_details';
@@ -1089,7 +1179,6 @@ begin
     fcs2Tables('er_temp_investor') := 'er_temp_investor';
     fcs2Tables('eusdpct') := 'eusdpct';
     fcs2Tables('eusdtrsta') := 'eusdtrsta';
-    fcs2Tables('eventlog') := 'eventlog';
     fcs2Tables('eventlogtype') := 'eventlogtype';
     fcs2Tables('eventnumbers') := 'eventnumbers';
     fcs2Tables('eventtype') := 'eventtype';
@@ -2578,15 +2667,16 @@ begin
         -- which will be the case most often, otherwise, tag it on to
         -- the fcs7Table list.
         -- Existing tables are most likely to be found in fcs2Tables
-        -- or fcs6Tables as the rest are single table lists.
+        -- fcs7Tables or fcs6Tables as the rest are small table lists.
         currentTable := TableNameIndex.table_name;
         if (fcs2Tables.exists(currentTable) or
+            fcs7Tables.exists(currentTable) or
             fcs6Tables.exists(currentTable) or
             fcs1Tables.exists(currentTable) or
             fcs3Tables.exists(currentTable) or
             fcs4Tables.exists(currentTable) or
             fcs5Tables.exists(currentTable) or
-            fcs7Tables.exists(currentTable)) then
+            fcs8Tables.exists(currentTable)) then
             
             -- Ignore this one.
             null;
@@ -2652,6 +2742,13 @@ begin
 
         if (fcs7Tables.exists(currentTable)) then
             fcs7Tables.delete(unLovedTables(tableIndexer));
+            tableIndexer := unLovedTables.next(tableIndexer);
+            --continue;
+            goto end_loop;
+        end if;
+
+        if (fcs8Tables.exists(currentTable)) then
+            fcs8Tables.delete(unLovedTables(tableIndexer));
             tableIndexer := unLovedTables.next(tableIndexer);
             --continue;
             goto end_loop;

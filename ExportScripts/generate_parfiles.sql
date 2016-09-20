@@ -39,6 +39,10 @@ spool exp_ROWS_FCS7.par
 exec xxnd_parfiles.buildFCS7('&&Output_directory_for_dumpfiles');
 spool off
 
+spool exp_ROWS_FCS8.par
+exec xxnd_parfiles.buildFCS8('&&Output_directory_for_dumpfiles');
+spool off
+
 
 
 

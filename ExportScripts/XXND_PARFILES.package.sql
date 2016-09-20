@@ -12,6 +12,7 @@ create or replace package xxnd_parfiles as
     yesRows        constant varchar2(30) := 'rows=y';
     noRows         constant varchar2(30) := 'rows=n';
     noStatistics   constant varchar2(30) := 'statistics=none';
+    yesConsistent  constant varchar2(30) := 'consistent=y';
 
     -- Various buffer sizes
     buffer_1e6     constant varchar2(30) := 'buffer=1000000';
@@ -21,11 +22,20 @@ create or replace package xxnd_parfiles as
     openTables     constant varchar2(30) := 'tables=(';
     closeTables    constant varchar2(1)  := ')';
     
-    -- Default list of owners
-    allOwners      constant varchar2(200) := '(CMTEMP,FCS,ITOPS,LEEDS_CONFIG,OEIC_RECALC,ONLOAD,UVSCHEDULER)';
+    -- Default list of owners. These are always exported.
+    alwaysOwners   constant varchar2(200) := 'CMTEMP,FCS,ITOPS,LEEDS_CONFIG,OEIC_RECALC,ONLOAD,UVSCHEDULER';
     
-    -- Tables lists for the various exports.
-    type tTableList is table of dba_tables.table_name%type
+    -- Full list - we need to include the ONLOAD_% owners, as well as the above.
+    allOwners      varchar2(2000);
+    
+    -- Tables lists for the various exports. This should be anchored as:
+    -- type tTableList is table of dba_tables.table_name%type
+    -- buit we have one table in fcs8Tables that has a Mixed Case name
+    -- so requires three sets of double quotes at each end, which makes
+    -- it longer than a table_name column. Sigh.
+    -- 
+    
+    type tTableList is table of varchar2(40)    
         index by dba_tables.table_name%type;
         
     fcs1Tables     tTableList;
@@ -35,6 +45,7 @@ create or replace package xxnd_parfiles as
     fcs5Tables     tTableList;
     fcs6Tables     tTableList;
     fcs7Tables     tTableList;
+    fcs8Tables     tTableList;
     unLovedTables  tTableList;
     
     -- And a couple of working indexers for same.
@@ -51,6 +62,7 @@ create or replace package xxnd_parfiles as
     procedure buildFCS5(iFolder in varchar2);
     procedure buildFCS6(iFolder in varchar2);
     procedure buildFCS7(iFolder in varchar2);
+    procedure buildFCS8(iFolder in varchar2);
 
 end;
 /    
