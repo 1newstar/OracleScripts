@@ -174,6 +174,16 @@ create or replace package body xxnd_parfiles as
         buildTables(fcs8Tables);
     end;
     
+    procedure buildFCS9(iFolder in varchar2) is
+        dumpFile constant varchar2(30) := 'exp_ROWS_FCS9.dmp';
+        logFile constant varchar2(30) := 'exp_ROWS_FCS9.log';
+    begin
+        buildCommon();
+        pl('file=' || iFolder || '/' || dumpFile);
+        pl('log=' || iFolder || '/' || logFile);
+        buildTables(fcs9Tables);
+    end;
+    
 -- Code to initialise the various lists when this package is loaded.
 -- Each list is indexed by it's own value, which makes deleting
 -- and finding a lot easier, if not much harder to type when doing
@@ -731,10 +741,12 @@ begin
     
 
     -- Easy stuff now, one table only in each export - the biggies!
+    -- And XML_FATCA_REPORTS whicjh we need a separate copy of.
     fcs1Tables('audit_log_detail') := 'audit_log_detail';   
     fcs3Tables('ordtran') := 'ordtran';
     fcs4Tables('stp_messages') := 'stp_messages';
     fcs5Tables('audit_log') := 'audit_log';
+    fcs9Tables('xml_fatca_reports') := 'xml_fatca_reports';
 
     -- Getting harder now, a few tables...
     fcs6Tables('alert_log') := 'alert_log';
@@ -742,6 +754,7 @@ begin
     fcs6Tables('divpay') := 'divpay';
     fcs6Tables('emxtrans') := 'emxtrans';
     fcs6Tables('eventlog') := 'eventlog';
+    fcs6Tables('fee_documents') := 'fee_documents';
     fcs6Tables('glacper') := 'glacper';
     fcs6Tables('glposts') := 'glposts';
     fcs6Tables('pso_investor_lookup') := 'pso_investor_lookup';
@@ -1345,7 +1358,6 @@ begin
     fcs2Tables('fee_calc_master_test') := 'fee_calc_master_test';
     fcs2Tables('fee_calc_monthly') := 'fee_calc_monthly';
     fcs2Tables('fee_calc_value') := 'fee_calc_value';
-    fcs2Tables('fee_documents') := 'fee_documents';
     fcs2Tables('fee_history') := 'fee_history';
     fcs2Tables('fee_im') := 'fee_im';
     fcs2Tables('fee_investment_manager') := 'fee_investment_manager';
@@ -2648,7 +2660,6 @@ begin
     fcs2Tables('ws_service_operation') := 'ws_service_operation';
     fcs2Tables('ws_systems') := 'ws_systems';
     fcs2Tables('ws_system_client') := 'ws_system_client';
-    fcs2Tables('xml_fatca_reports') := 'xml_fatca_reports';
     fcs2Tables('xml_status_temp') := 'xml_status_temp';
     
     

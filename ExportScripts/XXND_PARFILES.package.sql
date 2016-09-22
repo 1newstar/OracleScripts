@@ -46,6 +46,7 @@ create or replace package xxnd_parfiles as
     fcs6Tables     tTableList;
     fcs7Tables     tTableList;
     fcs8Tables     tTableList;
+    fcs9Tables     tTableList;
     unLovedTables  tTableList;
     
     -- And a couple of working indexers for same.
@@ -63,6 +64,7 @@ create or replace package xxnd_parfiles as
     procedure buildFCS6(iFolder in varchar2);
     procedure buildFCS7(iFolder in varchar2);
     procedure buildFCS8(iFolder in varchar2);
+    procedure buildFCS9(iFolder in varchar2);
 
 end;
 /    

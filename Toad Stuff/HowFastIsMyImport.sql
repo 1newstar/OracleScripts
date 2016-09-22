@@ -7,6 +7,7 @@
 -- will show a decreasing "rows per minute" figure as there
 -- are no more rows importing, but time is still passing!
 --
+-- Get all the table's still being loaded...
 select  substr(sql_text,instr(sql_text,'INTO "') +6,instr(sql_text, '(') - instr(sql_text,'INTO "') -8) table_name,
         null index_name,
         rows_processed,
@@ -19,6 +20,7 @@ and     open_versions > 0
 --
 union all
 --
+-- Any indexes being created yet?
 select  replace(substr(sql_text,instr(sql_text,'ON "') +4,instr(sql_text, '(') - instr(sql_text,'ON "') -6),'"', null) table_name,
         replace(substr(sql_text,instr(sql_text,'INDEX "') +7,instr(sql_text, ' ON') - instr(sql_text,'INDEX "') -8),'"', null) index_name,
         null rows_processed,
@@ -30,5 +32,5 @@ and     command_type = 9
 and     open_versions > 0
 --
 -- List the table first, then the index creation, if any.
-order   by 1, 2 nulls first;
+order   by table_name, index_name nulls first;
 
