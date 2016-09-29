@@ -715,6 +715,22 @@ begin
     unLovedTables('investor_cat_mv') := 'investor_cat_mv';
     unLovedTables('ordtran_mv') := 'ordtran_mv';
         
+    -- External Tabkles used for an old ThreadNeedle Street takeon. No longer
+    -- required.
+        
+    unLovedTables('ext_thr_tblclient') := 'ext_thr_tblclient';
+    unLovedTables('ext_thr_tblclientagreement') := 'ext_thr_tblclientagreement';
+    unLovedTables('ext_thr_tblclientholding') := 'ext_thr_tblclientholding';
+    unLovedTables('ext_thr_tblcontacts') := 'ext_thr_tblcontacts';
+    unLovedTables('ext_thr_tbldetailtran') := 'ext_thr_tbldetailtran';
+    unLovedTables('ext_thr_tblfund') := 'ext_thr_tblfund';
+    unLovedTables('ext_thr_tblfundamc') := 'ext_thr_tblfundamc';
+    unLovedTables('ext_thr_tblfundtype') := 'ext_thr_tblfundtype';
+    unLovedTables('ext_thr_tblprice') := 'ext_thr_tblprice';
+    unLovedTables('ext_thr_tbltransaction') := 'ext_thr_tbltransaction';
+    unLovedTables('ext_thr_tbltranstype') := 'ext_thr_tbltranstype';
+    unLovedTables('ext_thr_tblvaldate') := 'ext_thr_tblvaldate';
+    unLovedTables('ext_thr_tblwithdrawalallowance') := 'ext_thr_tblwithdrawalallowance';
     
     -- ****************************************************************
     -- The following lists define the tables that might be in each
@@ -2687,7 +2703,8 @@ begin
             fcs3Tables.exists(currentTable) or
             fcs4Tables.exists(currentTable) or
             fcs5Tables.exists(currentTable) or
-            fcs8Tables.exists(currentTable)) then
+            fcs8Tables.exists(currentTable) or
+            fcs9Tables.exists(currentTable)) then
             
             -- Ignore this one.
             null;
