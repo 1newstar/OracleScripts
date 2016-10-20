@@ -200,7 +200,8 @@ begin
     -- that are not LOCKED and EXPIRED, which are not Oracle created users,
     -- and which own objects. We need those.  
     -- We have also hard coded the following users, in the package secification:
-    -- CMTEMP,FCS,ITOPS,LEEDS_CONFIG,OEIC_RECALC,ONLOAD and UVSCHEDULER   
+    -- CMTEMP,FCS,ITOPS,LEEDS_CONFIG,OEIC_RECALC and UVSCHEDULER
+    -- ONLOAD was removed as unwanted after the Trial Run.   
 
     for takeon in (
         select username 
@@ -221,8 +222,7 @@ begin
             and o.owner not like 'FLOWS\_%' escape '\'
             -- We don't want AURORA users either.
             and o.owner not like 'AURORA$%'
-            -- Nor do we care about this one.
-            and o.owner <> 'DISCADMIN'
+            -- Nor do we care about any of the following:
             and o.owner NOT IN 
                 (       
                         -- Hard coded users that we aalways export.
@@ -248,7 +248,7 @@ begin
                         ,'BI'     ,'HR'    ,'IX'       ,'OE'    ,'PM'    ,'QS'    ,'SH' 
                         ,'QS_ADM' ,'QS_CB' ,'QS_CBADM' ,'QS_CS' ,'QS_ES' ,'QS_OS' ,'QS_WS' 
                         -- Third party product accounts.
-                        ,'TOAD','SPHINXCST','JLM'
+                        ,'TOAD','SPHINXCST','JLM', 'DISCADMIN','ONLOAD'
                 )
         ORDER BY username
     )
@@ -2777,6 +2777,13 @@ begin
 
         if (fcs8Tables.exists(currentTable)) then
             fcs8Tables.delete(unLovedTables(tableIndexer));
+            tableIndexer := unLovedTables.next(tableIndexer);
+            --continue;
+            goto end_loop;
+        end if;
+
+        if (fcs9Tables.exists(currentTable)) then
+            fcs9Tables.delete(unLovedTables(tableIndexer));
             tableIndexer := unLovedTables.next(tableIndexer);
             --continue;
             goto end_loop;

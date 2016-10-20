@@ -23,9 +23,9 @@ create or replace package xxnd_parfiles as
     closeTables    constant varchar2(1)  := ')';
     
     -- Default list of owners. These are always exported.
-    alwaysOwners   constant varchar2(200) := 'CMTEMP,FCS,ITOPS,LEEDS_CONFIG,OEIC_RECALC,ONLOAD,UVSCHEDULER';
+    alwaysOwners   constant varchar2(200) := 'CMTEMP,FCS,ITOPS,LEEDS_CONFIG,OEIC_RECALC,UVSCHEDULER';
     
-    -- Full list - we need to include the ONLOAD_% owners, as well as the above.
+    -- Full list - we need to include the TAKEON_% owners, as well as the above.
     allOwners      varchar2(2000);
     
     -- Tables lists for the various exports. This should be anchored as:
