@@ -8,6 +8,13 @@
 -- are no more rows importing, but time is still passing!
 --
 -- Get all the table's still being loaded...
+
+
+-- For SQL*Plus:
+--set lines 2000 pages 2000 trimspool on
+--col index_name form a31
+--col table_name for a31
+
 select  substr(sql_text,instr(sql_text,'INTO "') +6,instr(sql_text, '(') - instr(sql_text,'INTO "') -8) table_name,
         null index_name,
         rows_processed,
