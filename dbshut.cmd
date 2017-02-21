@@ -24,7 +24,7 @@ REM ----------------------------------------------------------------------------
 REM INFORMATION:
 REM -------------------------------------------------------------------------------
 REM Net Start displays all running services.
-REM Find /i "OracleService" extracts only those with "OracleService" in their name.
+REM Find /i "OracleService" extracts only those with "OracleSErvice" in their name.
 REM Net Stop XXX stops service xxx.
 REM
 REM FOR /F %%S IN ('command') DO (something) - calls "something" for each value in 

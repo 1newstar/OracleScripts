@@ -1,26 +1,37 @@
-@echo off
+rem @echo off
 Rem   ================================================================
 Rem  | Clone an existing Oracle Database from an existing database,   |
 Rem  | with RMAN active database cloning. This requires 11g to work.  |
+Rem  |                                                                |
+Rem  | The AUXILIARY database must have an entry in its LISTENER's    |
+Rem  | SID_LIST setings of connections using the name won't be able   |
+Rem  | to connect.                                                    |
 Rem  |                                                                |
 Rem  | Norman Dunbar.                                                 |
 Rem  | June 2016.                                                     |
 Rem   ================================================================
 Rem 
 Rem 
-Rem   =================================================================
-Rem  | USAGE:                                                          |
-Rem  |                                                                 | 
-Rem  | dbClone  src_db src_pw dst_db dst_pw check                      | 
-Rem  | dbClone  help                                                   | 
-Rem  |                                                                 |
-Rem  | src_db  - Database to be cloned.                                |
-Rem  | src_pw  - SYS password for the source database.                 |
-Rem  | dst_db  - Database to be refreshed from source.                 |
-Rem  | dst_pw  - SYS password for the destination database.            |
-Rem  |                                                                 |
-Rem  | help    - Just display's usage details.                         |
-Rem   =================================================================
+Rem    ===========================================================================
+Rem   * USAGE:                                                                    *
+Rem   *                                                                           *
+Rem   * dbClone  src_db src_pw dst_db dst_pw [rmancat_user rmancat_pw rmancat_db] *
+Rem   *                                                                           *
+Rem   *---------------------------------------------------------------------------*
+Rem   * MANDATORY PARAMETERS                                                      *
+Rem   *                                                                           *
+Rem   * src_db       - Database to be cloned.  MUST BE OPEN.                      *
+Rem   * src_pw       - SYS password for the source database.                      *
+Rem   * dst_db       - Database to be refreshed from source. MUST BE OPEN.        *
+Rem   * dst_pw       - SYS password for the destination database.                 *
+Rem   *                                                                           *
+Rem   *---------------------------------------------------------------------------*
+Rem   * OPTIONAL PARAMETERS                                                       *
+Rem   *                                                                           *
+Rem   * rmancat_user - username for the desired RMAN catalog. [rman11g]           *
+Rem   * rmancat_pw   - password for the RMAN catalog user. [Password for rman11g] *
+Rem   * rmancat_db   - The tns alias for the RMAN catalog database. [AZRMN01]     *
+Rem    ===========================================================================
 Rem 
 Rem 
 Rem   ================================================================
@@ -54,7 +65,7 @@ Rem   ================================================================
 Rem  | Internal Variables.                                            |
 Rem   ================================================================
 set VERSION=1.00
-set SCRIPTS_LOCATION=rman_scripts
+set SCRIPTS_LOCATION=dbclone_scripts
 set RMAN_SCRIPT=%SCRIPTS_LOCATION%\clone_database.rman
 set RMAN_UNREGISTER_SCRIPT=%SCRIPTS_LOCATION%\unregister_database.rman
 set RMAN_REREGISTER_SCRIPT=%SCRIPTS_LOCATION%\reregister_database.rman
@@ -62,6 +73,7 @@ set MYLOG=%0.log
 set TEMPFILES_SCRIPT=%SCRIPTS_LOCATION%\dbClone_tempfiles.sql
 set DB_PARAMS_SCRIPT=%SCRIPTS_LOCATION%\db_params.sql
 set DRIVE_LETTER_SCRIPT=%SCRIPTS_LOCATION%\getDriveLetter.sql
+set FRA_DRIVE_LETTER_SCRIPT=%SCRIPTS_LOCATION%\getFraDriveLetter.sql
 set SERVER_NAME_SCRIPT=%SCRIPTS_LOCATION%\getHostName.sql
 set SPFILE_NAME_SCRIPT=%SCRIPTS_LOCATION%\getSpfileName.sql
 set CREATE_PFILE_SCRIPT=%SCRIPTS_LOCATION%\createPfile.sql
@@ -69,11 +81,15 @@ set STARTUP_PFILE_SCRIPT=%SCRIPTS_LOCATION%\startupPfile.sql
 
 set TARGET_DRIVE=
 set AUXILIARY_DRIVE=
+set TARGET_FRA_DRIVE=
+set AUXILIARY_FRA_DRIVE=
 set TARGET_SERVER=
 set AUXILIARY_SERVER=
 set NOFILENAMECHECK=
 set SPFILE_NAME=
 set PFILE_NAME=
+set RMAN_USER=rman11g
+set RMAN_DB=azrmn01
 
 Rem   ================================================================
 Rem  | YOU MUST CHANGE THE FOLLOWING AS AND WHEN IT CHANGES ON THE    |
@@ -89,23 +105,16 @@ Rem
 del %MYLOG% > nul 2>&1
 
 call :log %0 - v%VERSION% : Logging to %MYLOG%
-call :log Executing: %0 %*
+call :log Executing: %0 %1 "password" %3 "password" %5 "password" %7
 
 
 Rem   ================================================================
-Rem  | Commandline Parameters.                                        |
+Rem  | Commandline Parameters - HELP?                                 |
 Rem   ================================================================
-set TARGET_DB=%1
-set TARGET_PASSWORD=%2
-set AUXILIARY_DB=%3
-set AUXILIARY_PASSWORD=%4
-
-
-Rem   ================================================================
-Rem  | Set the Window Title. Needed for later if we have to kill it. |
-Rem   ================================================================
-title=dbClone %AUXILIARY_DB%
-
+if "%1" EQU "" (
+    call :usage
+    goto :eof
+)
 
 Rem   ================================================================
 Rem  | Help requested?                                                |
@@ -115,6 +124,48 @@ if %ERRORLEVEL% EQU 0 (
     call :usage
     goto :eof
 )
+
+
+
+Rem   ================================================================
+Rem  | Commandline Parameters - MANDATORY.                            |
+Rem   ================================================================
+set TARGET_DB=%1
+set TARGET_PASSWORD=%2
+set AUXILIARY_DB=%3
+set AUXILIARY_PASSWORD=%4
+
+Rem   ================================================================
+Rem  | Commandline Parameters - OPTIONAL.                             |
+Rem   ================================================================
+Rem RMAN Catalog Username
+if "%5" EQU "" (
+	call :log RMAN Catalog username was not passed on commandline.
+    call :log RMAN Catalog username defaulting to %RMAN_USER%.    
+) else (
+    call :log RMAN Catalog username is %RMAN_USER%.    
+)
+
+Rem RMAN Catalog Password
+if "%6" EQU "" (
+	call :log RMAN Catalog password was not passed on commandline.
+    call :log RMAN Catalog username defaulting to **********.    
+) else (
+    call :log RMAN Catalog password is **********.    
+)
+
+Rem RMAN Catalog Database
+if "%7" EQU "" (
+	call :log RMAN Catalog database was not passed on commandline.
+    call :log RMAN Catalog username defaulting to %RMAN_DB%.    
+) else (
+    call :log RMAN Catalog username is %RMAN_DB%.    
+)
+
+Rem   ================================================================
+Rem  | Set the Window Title. Needed for later if we have to kill it. |
+Rem   ================================================================
+title=dbClone %AUXILIARY_DB%
 
 
 Rem   ================================================================
@@ -132,6 +183,14 @@ if "%TARGET_DB%" EQU "" (
     call :log Refreshing from database %TARGET_DB%.
 )
 
+tnsping %TARGET_DB% >nul
+if "%ERRORLEVEL%" EQU "1" (
+	call :log %TARGET_DB% cannot be reached by tnsping.
+	set ERRORS=1
+) else (
+	call :log %TARGET_DB% was reached by tnsping.
+)
+
 if "%AUXILIARY_DB%" EQU "" (
 	call :log Destination Database was not passed on commandline.
 	set ERRORS=1
@@ -139,9 +198,26 @@ if "%AUXILIARY_DB%" EQU "" (
     call :log Refreshing to database %AUXILIARY_DB%.
 )
 
+tnsping %AUXILIARY_DB% >nul
+if "%ERRORLEVEL%" EQU "1" (
+	call :log %AUXILIARY_DB% cannot be reached by tnsping.
+	set ERRORS=1
+) else (
+	call :log %AUXILIARY_DB% was reached by tnsping.
+)
+
+
 if "%TARGET_DB%" EQU "%AUXILIARY_DB%" (
 	call :log Destination Database %AUXILIARY_DB% is the same as the source database %TARGET_DB%.
 	set ERRORS=1
+)
+
+tnsping %RMAN_DB% >nul
+if "%ERRORLEVEL%" EQU "1" (
+	call :log %RMAN_DB% cannot be reached by tnsping.
+	set ERRORS=1
+) else (
+	call :log %RMAN_DB% was reached by tnsping.
 )
 
 
@@ -184,6 +260,11 @@ if not exist %RMAN_UNREGISTER_SCRIPT% (
 
 if not exist %DRIVE_LETTER_SCRIPT% (
 	call :log DRIVE_LETTER_SCRIPT script - %DRIVE_LETTER_SCRIPT% - does not exist.
+	set ERRORS=1
+)
+
+if not exist %FRA_DRIVE_LETTER_SCRIPT% (
+	call :log FRA_DRIVE_LETTER_SCRIPT script - %FRA_DRIVE_LETTER_SCRIPT% - does not exist.
 	set ERRORS=1
 )
 
@@ -242,7 +323,7 @@ if %ERRORS% EQU 1 (
 )
 
 
-:JFDI
+:JDI
 
 Rem Do we need to create or overwrite the clone script?
 if not exist %RMAN_SCRIPT% (
@@ -285,6 +366,18 @@ if "%TARGET_DRIVE%" EQU "?" (
 )
 
 Rem   ================================================================
+Rem  | Fetch the FRA drive letter for the source database datafiles.  |
+Rem   ================================================================
+call :log Retrieving FRA drive letter for database: %TARGET_DB%.
+for /f "delims=" %%a in ('sqlplus -s sys/%TARGET_PASSWORD%@%TARGET_DB% as sysdba @%FRA_DRIVE_LETTER_SCRIPT%') do @set TARGET_FRA_DRIVE=%%a
+call :check_rman_sqlplus
+call :log FRA Drive letter for database: %TARGET_DB% is: %TARGET_FRA_DRIVE%\.
+if "%TARGET_FRA_DRIVE%" EQU "?" (
+    call :log Database: %TARGET_DB%. Cannot read FRA drive letter.
+    set ERRORS=1
+)
+
+Rem   ================================================================
 Rem  | Fetch the drive letter for the destination database datafiles. |
 Rem   ================================================================
 call :log Retrieving drive letter for database: %AUXILIARY_DB%.
@@ -293,6 +386,18 @@ call :check_rman_sqlplus
 call :log Drive letter for database: %AUXILIARY_DB% is: %AUXILIARY_DRIVE%\.
 if "%AUXILIARY_DRIVE%" EQU "?" (
     call :log Database: %AUXILIARY_DB%. Cannot read data drive letter.
+    set ERRORS=1
+)
+
+Rem   =====================================================================
+Rem  | Fetch the FRA drive letter for the destination database datafiles.  |
+Rem   =====================================================================
+call :log Retrieving FRA drive letter for database: %AUXILIARY_DB%.
+for /f "delims=" %%a in ('sqlplus -s sys/%AUXILIARY_PASSWORD%@%AUXILIARY_DB% as sysdba @%FRA_DRIVE_LETTER_SCRIPT%') do @set AUXILIARY_FRA_DRIVE=%%a
+call :check_rman_sqlplus
+call :log FRA Drive letter for database: %AUXILIARY_DB% is: %AUXILIARY_FRA_DRIVE%\.
+if "%AUXILIARY_FRA_DRIVE%" EQU "?" (
+    call :log Database: %AUXILIARY_DB%. Cannot read FRA drive letter.
     set ERRORS=1
 )
 
@@ -334,7 +439,7 @@ Rem   ================================================================
 Rem  | Target database must have been started with an spfile.         |
 Rem   ================================================================
 call :log Checking spfile_name for database: %TARGET_DB%.
-for /f "delims=" %%a in ('sqlplus -s sys/ForConfig2lock as sysdba @%SPFILE_NAME_SCRIPT%') do @set SPFILE_NAME=%%a
+for /f "delims=" %%a in ('sqlplus -s sys/%TARGET_PASSWORD%@%TARGET_DB% as sysdba @%SPFILE_NAME_SCRIPT%') do @set SPFILE_NAME=%%a
 call :check_rman_sqlplus
 call :log Spfile name for database: %TARGET_DB% is: %SPFILE_NAME%.
 
@@ -361,7 +466,7 @@ if %ERRORS% EQU 1 (
 Rem   ================================================================
 Rem  | Auxiliary database must have be using a PFILE, so create one.  |
 Rem   ================================================================
-set PFILE_NAME=%oracle_home%\init.%AUXILIARY_DB%.ora
+set PFILE_NAME=%oracle_home%\database\init%AUXILIARY_DB%.ora
 set SPFILE_NAME=
 
 call :log Retrieving spfile_name for database: %AUXILIARY_DB%.
@@ -413,21 +518,26 @@ echo spfile                                                                   >>
 echo parameter_value_convert                                                  >> %RMAN_SCRIPT%
 echo '%TARGET_DRIVE%:\mnt\oradata\%TARGET_DB%',                               >> %RMAN_SCRIPT%
 echo '%AUXILIARY_DRIVE%:\mnt\oradata\%AUXILIARY_DB%',	                      >> %RMAN_SCRIPT%
-echo '%TARGET_DRIVE%:\mnt\fast_recovery_area\%TARGET_DB%',                    >> %RMAN_SCRIPT%
-echo '%AUXILIARY_DRIVE%:\mnt\fast_recovery_area\%AUXILIARY_DB%'               >> %RMAN_SCRIPT%
+echo '%TARGET_FRA_DRIVE%:\mnt\fast_recovery_area\%TARGET_DB%',                >> %RMAN_SCRIPT%
+echo '%AUXILIARY_FRA_DRIVE%:\mnt\fast_recovery_area\%AUXILIARY_DB%'           >> %RMAN_SCRIPT%
 echo set control_files                                                        >> %RMAN_SCRIPT%
 echo '%AUXILIARY_DRIVE%:\mnt\oradata\%AUXILIARY_DB%\control01.ctl',           >> %RMAN_SCRIPT%
-echo '%AUXILIARY_DRIVE%:\mnt\fast_recovery_area\%AUXILIARY_DB%\control02.ctl' >> %RMAN_SCRIPT%
+echo '%AUXILIARY_FRA_DRIVE%:\mnt\fast_recovery_area\%AUXILIARY_DB%\control02.ctl' >> %RMAN_SCRIPT%
 echo set db_file_name_convert                                                 >> %RMAN_SCRIPT%
 echo '%TARGET_DRIVE%:\mnt\oradata\%TARGET_DB%',                               >> %RMAN_SCRIPT%
 echo '%AUXILIARY_DRIVE%:\mnt\oradata\%AUXILIARY_DB%',	                      >> %RMAN_SCRIPT%
-echo '%TARGET_DRIVE%:\mnt\fast_recovery_area\%TARGET_DB%',                    >> %RMAN_SCRIPT%
-echo '%AUXILIARY_DRIVE%:\mnt\fast_recovery_area\%AUXILIARY_DB%'               >> %RMAN_SCRIPT%
+echo '%TARGET_FRA_DRIVE%:\mnt\fast_recovery_area\%TARGET_DB%',                >> %RMAN_SCRIPT%
+echo '%AUXILIARY_FRA_DRIVE%:\mnt\fast_recovery_area\%AUXILIARY_DB%'           >> %RMAN_SCRIPT%
 echo set log_file_name_convert                                                >> %RMAN_SCRIPT%
 echo '%TARGET_DRIVE%:\mnt\oradata\%TARGET_DB%',                               >> %RMAN_SCRIPT%
 echo '%AUXILIARY_DRIVE%:\mnt\oradata\%AUXILIARY_DB%',                         >> %RMAN_SCRIPT%
-echo '%TARGET_DRIVE%:\mnt\fast_recovery_area\%TARGET_DB%',                    >> %RMAN_SCRIPT%
-echo '%AUXILIARY_DRIVE%:\mnt\fast_recovery_area\%AUXILIARY_DB%'               >> %RMAN_SCRIPT%
+echo '%TARGET_FRA_DRIVE%:\mnt\fast_recovery_area\%TARGET_DB%',                >> %RMAN_SCRIPT%
+echo '%AUXILIARY_FRA_DRIVE%:\mnt\fast_recovery_area\%AUXILIARY_DB%'           >> %RMAN_SCRIPT%
+echo set instance_name '%AUXILIARY_DB%'                                       >> %RMAN_SCRIPT%
+echo set service_names '%AUXILIARY_DB%'                                       >> %RMAN_SCRIPT%
+echo set audit_file_dest 'C:\ORACLEDATABASE\ADMIN\%AUXILIARY_DB%\ADUMP'       >> %RMAN_SCRIPT%
+echo set dispatchers '(PROTOCOL=TCP) (SERVICE=%AUXILIARY_DB%XDB)'             >> %RMAN_SCRIPT%
+echo set db_recovery_file_dest '%AUXILIARY_DRIVE%:\mnt\fast_recovery_area'    >> %RMAN_SCRIPT%
 
 if "%NOFILENAMECHECK%" NEQ "" (
     echo %NOFILENAMECHECK%                                                    >> %RMAN_SCRIPT%
@@ -464,11 +574,11 @@ echo alter role NORMAL_USER identified by %AUXILIARY_DB%123;                  >>
 echo alter role SVC_AURA_SERV_ROLE identified by %AUXILIARY_DB%123;           >> %DB_PARAMS_SCRIPT%
 
 echo -- The following may fail. Please ignore.                                >> %DB_PARAMS_SCRIPT%
-echo -- alter database disable block change tracking;                         >> %DB_PARAMS_SCRIPT%
+echo alter database disable block change tracking;                            >> %DB_PARAMS_SCRIPT%
 
 echo -- The following will work.                                              >> %DB_PARAMS_SCRIPT%
 echo alter database enable block change tracking                              >> %DB_PARAMS_SCRIPT%
-echo using file '%AUXILIARY_DRIVE%:\mnt\fast_recovery_area\bct.dbf' reuse;    >> %DB_PARAMS_SCRIPT%
+echo using file '%AUXILIARY_FRA_DRIVE%:\mnt\fast_recovery_area\%AUXILIARY_DB%\bct.dbf' reuse;    >> %DB_PARAMS_SCRIPT%
 
 echo startup force                                                            >> %DB_PARAMS_SCRIPT%
 echo @tempfiles.sql                                                           >> %DB_PARAMS_SCRIPT%
@@ -493,13 +603,18 @@ Rem  | The database must be MOUNTed or OPEN for this to work.         |
 Rem   ================================================================
 Rem 
 call :log Deleting old backups for %AUXILIARY_DB%.
-call :log Unregistering %AUXILIARY_DB% from RMAN catalog (rman11g@azrmna01).
-rman target sys/%AUXILIARY_PASSWORD%@%AUXILIARY_DB% catalog rman11g/%RMAN_PASSWORD%@azrmn01 log="deRegister.%AUXILIARY_DB%.log" @%RMAN_UNREGISTER_SCRIPT%
+call :log Unregistering %AUXILIARY_DB% from RMAN catalog (%RMAN_USER%@%RMAN_DB%).
+rman target sys/%AUXILIARY_PASSWORD%@%AUXILIARY_DB% catalog %RMAN_USER%/%RMAN_PASSWORD%@%RMAN_DB% log="deRegister.%AUXILIARY_DB%.log" @%RMAN_UNREGISTER_SCRIPT%
 call :check_rman_sqlplus
 
 Rem   ================================================================
 Rem  | Use RMAN to clone the database.                                |
 Rem  | We need to restart the database in NOMOUNT mode with a PFILE.  |
+Rem   ================================================================
+Rem  | This will cause problems if the listener for the auxiliary     |
+Rem  | database doesn't have a static SID set up in the SID_LIST for  |
+Rem  | the listener. The @AUXILIARY_DB fails as the database is in    |
+Rem  | NOMOUNT and has not registered with the listener until open.   |
 Rem   ================================================================
 Rem 
 call :log NOMOUNTing database %AUXILIARY_DB% using PFILE: %PFILE_NAME%.
@@ -527,8 +642,8 @@ Rem  | Use RMAN to register the (new) destination database. This will |
 Rem  | also reconfigure the required RMAN parameters for the database.|
 Rem   ================================================================
 Rem 
-call :log Registering %AUXILIARY_DB% with RMAN catalog (rman11g@azrmna01).
-rman target sys/%AUXILIARY_PASSWORD%@%AUXILIARY_DB% catalog rman11g/%RMAN_PASSWORD%@azrmn01 log="reRegister.%AUXILIARY_DB%.log" @%RMAN_REREGISTER_SCRIPT%
+call :log Registering %AUXILIARY_DB% with RMAN catalog (%RMAN_USER%@%RMAN_DB%).
+rman target sys/%AUXILIARY_PASSWORD%@%AUXILIARY_DB% catalog %RMAN_USER%/%RMAN_PASSWORD%@%RMAN_DB% log="reRegister.%AUXILIARY_DB%.log" @%RMAN_REREGISTER_SCRIPT%
 call :check_rman_sqlplus
 
 
@@ -574,6 +689,37 @@ goto :eof
 
 
 Rem   ================================================================
+Rem  |                                                        USAGE() |
+Rem   ================================================================
+Rem  | Explain to the user what they typed in wrongly when calling    |
+Rem  | this utility.                                                  |
+Rem   ================================================================
+:usage
+
+echo  ===========================================================================
+echo * USAGE:                                                                    *
+echo *                                                                           *
+echo * dbClone  src_db src_pw dst_db dst_pw [rmancat_user rmancat_pw rmancat_db] *
+echo *                                                                           *
+echo *---------------------------------------------------------------------------*
+echo * MANDATORY PARAMETERS                                                      *
+echo *                                                                           *
+echo * src_db       - Database to be cloned.  MUST BE OPEN.                      *
+echo * src_pw       - SYS password for the source database.                      *
+echo * dst_db       - Database to be refreshed from source. MUST BE OPEN.        *
+echo * dst_pw       - SYS password for the destination database.                 *
+echo *                                                                           *
+echo *---------------------------------------------------------------------------*
+echo * OPTIONAL PARAMETERS                                                       *
+echo *                                                                           *
+echo * rmancat_user - username for the desired RMAN catalog. [rman11g]           *
+echo * rmancat_pw   - password for the RMAN catalog user. [Password for rman11g] *
+echo * rmancat_db   - The tns alias for the RMAN catalog database. [AZRMN01]     *
+echo  ===========================================================================
+goto :eof
+
+
+Rem   ================================================================
 Rem  |                                           CHECK_RMAN_SQLPLUS() |
 Rem   ================================================================
 Rem  | Check the exit code from RMAN to see if everything was ok.     |
@@ -583,43 +729,16 @@ Rem   ================================================================
 :check_rman_sqlplus
 
 echo.
-if %ERRORLEVEL% NEQ 0 (
+if %ERRORLEVEL% EQU 0 (
+	call :log RMAN or SQLPLUS completed successfully. (Exit %ERRORLEVEL%)
+) else (
+    rem In the following text, parenthesis must be escaped with ^
     call :log ************************************************
     call :log RMAN or SQL*Plus exited with result code %ERRORLEVEL%.
-    call :log You need to check the RMAN log file for details.
+    call :log You need to check the log file^(s^) for details.
     call :log ************************************************
+	exit /B 1
 )
 goto :eof
 
-Rem   ================================================================
-Rem  | Kill this job now. There's no easy way in a batch file to exit |
-Rem  | from the current batch file other than exit or goto :eof but   |
-Rem  | those only exit from the current call level, and here we are   |
-Rem  | in a sub-routine, possibly nested.                             |
-Rem  | This is why we set the window title to "dbClone %AUXILIARY_DB%"|
-Rem  | at the start.                                                  |
-Rem   ================================================================
-:kill_me_now
-taskkill /im cmd.exe /fi "windowtitle eq dbClone $AUXILIARY_DB%"
-goto :eof
 
-
-Rem   ================================================================
-Rem  |                                                        USAGE() |
-Rem   ================================================================
-Rem  | Explain to the user what they typed in wrongly when calling    |
-Rem  | this utility.                                                  |
-Rem   ================================================================
-:usage
-
-echo  =================================================================
-echo * USAGE:                                                          *
-echo *                                                                 *
-echo * dbClone  src_db src_pw dst_db dst_pw                            *
-echo *                                                                 *
-echo * src_db  - Database to be cloned.                                *
-echo * src_pw  - SYS password for the source database.                 *
-echo * dst_db  - Database to be refreshed from source.                 *
-echo * dst_drv - SYS password for the destination database.            *
-echo  =================================================================
-goto :eof

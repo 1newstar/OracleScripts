@@ -1,0 +1,41 @@
+run {                                                                    
+allocate auxiliary channel x1 device type DISK;                          
+allocate auxiliary channel x2 device type DISK;                          
+allocate auxiliary channel x3 device type DISK;                          
+allocate channel d1 device type DISK;                                    
+allocate channel d2 device type DISK;                                    
+allocate channel d3 device type DISK;                                    
+allocate channel d4 device type DISK;                                    
+allocate channel d5 device type DISK;                                    
+duplicate target database to azdba02                              
+from active database                                                     
+spfile                                                                   
+parameter_value_convert                                                  
+'G:\mnt\oradata\azdba01',                               
+'F:\mnt\oradata\azdba02',	                      
+'G:\mnt\fast_recovery_area\azdba01',                    
+'F:\mnt\fast_recovery_area\azdba02'               
+set control_files                                                        
+'F:\mnt\oradata\azdba02\control01.ctl',           
+'F:\mnt\fast_recovery_area\azdba02\control02.ctl' 
+set db_file_name_convert                                                 
+'G:\mnt\oradata\azdba01',                               
+'F:\mnt\oradata\azdba02',	                      
+'G:\mnt\fast_recovery_area\azdba01',                    
+'F:\mnt\fast_recovery_area\azdba02'               
+set log_file_name_convert                                                
+'G:\mnt\oradata\azdba01',                               
+'F:\mnt\oradata\azdba02',                         
+'G:\mnt\fast_recovery_area\azdba01',                    
+'F:\mnt\fast_recovery_area\azdba02'               
+;                                                                        
+release channel x1;                                                      
+release channel x2;                                                      
+release channel x3;                                                      
+release channel d1;                                                      
+release channel d2;                                                      
+release channel d3;                                                      
+release channel d4;                                                      
+release channel d5;                                                      
+}                                                                        
+exit                                                                     

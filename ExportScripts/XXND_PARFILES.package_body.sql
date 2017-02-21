@@ -302,7 +302,6 @@ begin
     unLovedTables('fs3_int_ordtran') := 'fs3_int_ordtran';
     unLovedTables('fs3_int_register') := 'fs3_int_register';
     unLovedTables('fs3_int_saver') := 'fs3_int_saver';
-    unLovedTables('ifa_dilution_levy_maint') := 'ifa_dilution_levy_maint';
     unLovedTables('nep_int_bacspay') := 'nep_int_bacspay';
     unLovedTables('nep_int_ifa') := 'nep_int_ifa';
     unLovedTables('nep_int_ifa_bank') := 'nep_int_ifa_bank';
@@ -330,14 +329,11 @@ begin
     unLovedTables('rl_clbapf_bacspay') := 'rl_clbapf_bacspay';
     unLovedTables('rl_clntpf_investor') := 'rl_clntpf_investor';
     unLovedTables('rl_clrrpf') := 'rl_clrrpf';
-    unLovedTables('rl_final_bonus_rates') := 'rl_final_bonus_rates';
     unLovedTables('rl_mandpf_dd') := 'rl_mandpf_dd';
     unLovedTables('rl_marketing_linda') := 'rl_marketing_linda';
     unLovedTables('rl_marketing_three') := 'rl_marketing_three';
     unLovedTables('rl_payrpf') := 'rl_payrpf';
-    unLovedTables('rl_policy_cross_ref') := 'rl_policy_cross_ref';
     unLovedTables('rl_policy_cross_ref_2009_2010') := 'rl_policy_cross_ref_2009_2010';
-    unLovedTables('rl_policy_status') := 'rl_policy_status';
     unLovedTables('rl_policy_status_2009_2010') := 'rl_policy_status_2009_2010';
     unLovedTables('rl_policy_status_temp') := 'rl_policy_status_temp';
     unLovedTables('rl_prv_count_2009_2010') := 'rl_prv_count_2009_2010';
@@ -508,12 +504,9 @@ begin
     unLovedTables('glcalfyr') := 'glcalfyr';
     unLovedTables('glcalmast') := 'glcalmast';
     unLovedTables('glcamast') := 'glcamast';
-    unLovedTables('glgroup') := 'glgroup';
-    unLovedTables('glgroup_lgmast') := 'glgroup_lgmast';
     unLovedTables('glinvs') := 'glinvs';
     unLovedTables('gllegfyp') := 'gllegfyp';
     unLovedTables('gllegfyr') := 'gllegfyr';
-    unLovedTables('gllgmast') := 'gllgmast';
     unLovedTables('glposts') := 'glposts';
     unLovedTables('glrbhead') := 'glrbhead';
     unLovedTables('glrddef') := 'glrddef';
@@ -524,7 +517,6 @@ begin
     unLovedTables('glsalinv') := 'glsalinv';
     unLovedTables('glsite') := 'glsite';
     unLovedTables('glskelac') := 'glskelac';
-    unLovedTables('glskelmast') := 'glskelmast';
     
     -- Then the Category 2 - Fund Accounting tables.
     
@@ -715,7 +707,7 @@ begin
     unLovedTables('investor_cat_mv') := 'investor_cat_mv';
     unLovedTables('ordtran_mv') := 'ordtran_mv';
         
-    -- External Tabkles used for an old ThreadNeedle Street takeon. No longer
+    -- External Tables used for an old ThreadNeedle Street takeon. No longer
     -- required.
         
     unLovedTables('ext_thr_tblclient') := 'ext_thr_tblclient';
@@ -806,6 +798,7 @@ begin
     fcs7Tables('fee_valuation') := 'fee_valuation';
     fcs7Tables('fixtrans') := 'fixtrans';
     fcs7Tables('glacmast') := 'glacmast';
+    fcs7Tables('ifa_dilution_levy_maint') := 'ifa_dilution_levy_maint';
     fcs7Tables('incexp_analysis') := 'incexp_analysis';
     fcs7Tables('incexp_analysis_ter') := 'incexp_analysis_ter';
     fcs7Tables('incexpit') := 'incexpit';
@@ -838,6 +831,8 @@ begin
     fcs7Tables('valcheck') := 'valcheck';
     fcs7Tables('valsignof_detail') := 'valsignof_detail';
     fcs7Tables('valxrate') := 'valxrate';
+    fcs7Tables('ws_message_history') := 'ws_message_history';
+
     
     -- And now, the nightmare begins!
     fcs2Tables('abersdrt') := 'abersdrt';
@@ -1500,7 +1495,6 @@ begin
     fcs2Tables('ifatemp') := 'ifatemp';
     fcs2Tables('ifatrail') := 'ifatrail';
     fcs2Tables('ifa_bank') := 'ifa_bank';
-    fcs2Tables('ifa_dilution_levy_maint') := 'ifa_dilution_levy_maint';
     fcs2Tables('ifa_discounts') := 'ifa_discounts';
     fcs2Tables('ifa_discount_terms') := 'ifa_discount_terms';
     fcs2Tables('ifa_discount_terms_audit') := 'ifa_discount_terms_audit';
@@ -2669,7 +2663,6 @@ begin
     fcs2Tables('ws_error_definition') := 'ws_error_definition';
     fcs2Tables('ws_fund_authorisation') := 'ws_fund_authorisation';
     fcs2Tables('ws_message_event') := 'ws_message_event';
-    fcs2Tables('ws_message_history') := 'ws_message_history';
     fcs2Tables('ws_message_operation') := 'ws_message_operation';
     fcs2Tables('ws_message_type') := 'ws_message_type';
     fcs2Tables('ws_notifications') := 'ws_notifications';

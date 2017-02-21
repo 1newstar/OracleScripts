@@ -1,0 +1,28 @@
+
+alter user LEEDS_CONFIG quota 26214400 on CFA;
+alter user ONLOAD quota 524288000 on TAKEON;
+alter user WEBSERVICE_USER quota 52428800 on CFA;
+grant unlimited tablespace to AIFMD_USER;
+grant unlimited tablespace to BANKMANAGER_USER;
+grant unlimited tablespace to CAPSIL_STP_USER;
+grant unlimited tablespace to CASONLINE_USER;
+grant unlimited tablespace to COMMS_USER;
+grant unlimited tablespace to DISCADMIN;
+grant unlimited tablespace to DISCBATCH;
+grant unlimited tablespace to EMX_USER;
+grant unlimited tablespace to FATCA_BRIDGE_USER;
+grant unlimited tablespace to FCS;
+grant unlimited tablespace to FUND_MANAGER_USER;
+grant unlimited tablespace to GPH_USER;
+grant unlimited tablespace to INVESTOR_MANAGER_USER;
+grant unlimited tablespace to IOTERMINAL_USER;
+grant unlimited tablespace to ISA_MANAGER_USER;
+grant unlimited tablespace to MI_USER;
+grant unlimited tablespace to OEIC_RECALC;
+grant unlimited tablespace to PLAN_MANAGER_USER;
+grant unlimited tablespace to PRICING_USER;
+grant unlimited tablespace to STPUSER;
+grant unlimited tablespace to SVC_AURA_SERV;
+grant unlimited tablespace to SVC_DOCUMENT_CONTENT_USER;
+grant unlimited tablespace to SVC_PRICING_USER;
+grant unlimited tablespace to WEBSERVICE_USER;

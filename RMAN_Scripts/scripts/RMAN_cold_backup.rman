@@ -23,7 +23,8 @@ run {
 	format '&1\%ORACLE_SID%\%U';
 
 	backup 
-		section size 150m
+		as compressed backupset
+		filesperset 3
 		full database
 		tag 'cold_backup';
 

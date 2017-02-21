@@ -1,0 +1,11 @@
+SET lines 80 NUMWIDTH 12 PAGES 10000 LONG 2000000000
+ALTER SESSION SET nls_date_format='YYYY-MM-DD HH24:MI:SS';
+COL value FORMAT a15
+
+SELECT * FROM nls_database_parameters 
+WHERE  parameter LIKE '%SET' 
+ORDER  BY 1
+ 
+ SPOOL S020_CHECK_CHAR_SET_results.lis
+ /
+ SPOOL OFF

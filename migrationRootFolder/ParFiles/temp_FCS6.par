@@ -1,0 +1,15 @@
+userid="fcs/devenv"
+rows=n
+ignore=y
+grants=n
+commit=y
+constraints=n
+compile=n
+indexes=y
+skip_unusable_indexes=y
+buffer=1000000000
+statistics=none
+log=logfiles\temp_FCS6.log
+file=dumpfiles\exp_ROWS_FCS6.dmp
+fromuser=fcs
+tables=ALERT_LOG

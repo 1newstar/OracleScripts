@@ -1,0 +1,11 @@
+
+SET lines 80 NUMWIDTH 12 PAGES 10000 LONG 2000000000
+ALTER SESSION SET nls_date_format='YYYY-MM-DD HH24:MI:SS';
+
+SELECT * FROM v$version
+
+spool T020b_CHECK_CATALOG_CATPROC_results.lis
+/
+spool off
+
+

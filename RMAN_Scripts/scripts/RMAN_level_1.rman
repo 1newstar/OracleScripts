@@ -19,11 +19,21 @@ run {
 	device type DISK
 	format '&1\%ORACLE_SID%\%U';
 
-	backup incremental level 1 database;
+	backup 
+		as compressed backupset
+		incremental level 1 
+		filesperset 3
+		database;
 
 	sql 'alter system archive log current';
 
-	backup archivelog all;
+	change
+		archivelog all validate;
+		
+	backup 
+		as compressed backupset
+		filesperset 30
+		archivelog all;
 
 	release channel disk_1;
 	release channel disk_2;

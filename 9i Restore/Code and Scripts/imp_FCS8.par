@@ -1,0 +1,13 @@
+userid="/ as sysdba"
+grants=n
+constraints=n
+indexes=y
+rows=y
+ignore=y
+commit=y
+full=y
+skip_unusable_indexes=y
+buffer=10000000
+statistics=none
+file=/path/to/exp_ROWS_FCS8.dmp
+log=/path/to/imp_ROWS_FCS8.log

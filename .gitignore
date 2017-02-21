@@ -2,3 +2,6 @@
 *.log
 Toad Stuff\*.lst
 Toad Stuff\*.log
+Docs\sources\*.docx
+Docs\sources\*.pdf
+

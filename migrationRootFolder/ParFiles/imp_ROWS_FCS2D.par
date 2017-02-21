@@ -1,0 +1,14 @@
+userid="fcs/devenv"
+rows=y
+ignore=y
+grants=n
+commit=y
+constraints=n
+compile=n
+indexes=y
+skip_unusable_indexes=y
+buffer=1000000000
+statistics=none
+log=logfiles\imp_ROWS_FCS2D.log
+file=dumpfiles\exp_ROWS_FCS2D.dmp
+full=y

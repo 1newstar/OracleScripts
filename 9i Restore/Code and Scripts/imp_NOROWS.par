@@ -1,0 +1,12 @@
+userid="/ as sysdba"
+grants=n
+constraints=n
+indexes=n
+rows=n
+ignore=y
+compile=n
+full=y
+buffer=1000000
+statistics=none
+file=/path/to/exp_NOROWS.dmp
+log=/path/to/imp_NOROWS.log

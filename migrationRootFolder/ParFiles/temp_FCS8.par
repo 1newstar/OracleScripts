@@ -1,0 +1,15 @@
+userid="fcs/devenv"
+rows=y
+ignore=y
+grants=y
+commit=y
+constraints=y
+compile=y
+indexes=y
+skip_unusable_indexes=y
+buffer=1000000000
+statistics=none
+log=logfiles\temp_FCS8.log
+file=dumpfiles\exp_ROWS_FCS8.dmp
+fromuser=fcs
+tables=("""UKFATCASubmissionFIRe98_TAB""")

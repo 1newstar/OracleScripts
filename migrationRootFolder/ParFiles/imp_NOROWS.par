@@ -1,0 +1,12 @@
+userid="fcs/devenv"
+rows=n
+ignore=y
+grants=n
+buffer=1000000000
+statistics=none
+constraints=n
+indexes=n
+compile=n
+full=y
+log=logfiles\imp_NOROWS.log
+file=dumpfiles\exp_NOROWS.dmp
