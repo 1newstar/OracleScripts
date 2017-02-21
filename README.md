@@ -5,8 +5,9 @@ The `docs` folder has ReStructuredText source files for a number of documents th
 
 - 9iRestore - How to bring a database, upgraded from 9i to 11g, back from 11g to 9i. 
 - DatabaseHandover - Documentation for me to supply to my replacements, colleagues when this project is finished.
-- RMANRestore - Hosw to identify the files required, and the processes involved in restoring an RMAN (11g) database dump back to a test server to ensure that the backups are viable.
-- There may be more .... wtach this space -> [ ]
+- RMANRestore - How to identify the files required, and the processes involved in restoring an RMAN (11g) database dump back to a test server to ensure that the backups are viable.
+- There may be more .... watch this space -> [ ]
+- RMANCloning - How to clone a database to a new one, or to an existiing one to refresh it, using RMAN.
 
 ## Scripts currently available:
 

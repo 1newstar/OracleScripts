@@ -29,10 +29,16 @@ Documents Included
 ------------------
 
 9iRestore
-    A document that details how to revert an 11g database in the Azure cloud (aka *fog*), running on Windows, back to a 9i database running on Solaris, and not in the cloud.
+    A document that details how to revert an 11g database in the Azure cloud (aka The *Fog*), running on Windows, back to a 9i database running on Solaris, and not in the cloud.
     
 DatabaseHandover
     Handover document for when my contract expires and some other victim has to take on my work.
+    
+00 Using DBCA to Build Initial Databases
+    Using Oracle's DBCA to build an initial blank database ready to be upgraded to a full sized UV database.
+
+01 Building UV Databases
+    Upgrading a blank DBCA created database with various scripts, to resemble a full sized UV database, ready for importing of the data.
     
 RMANRestore
     How to restore an RMAN backup, taken on one server, to a new database on another server (or a compatible kind) using 11g RMAN. Also details how to identify the files required - given RMAN's interesting naming style! Basically, this is a &how to determine if your backups can be restored* document for DBAs.
