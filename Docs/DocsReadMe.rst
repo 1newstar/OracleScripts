@@ -93,7 +93,19 @@ Colour names are case sensitive!
 
 See <https://en.wikibooks.org/wiki/LaTeX/Colors#Predefined_colors> for details and note that the colours demonstrated in the nice colourful table are the ones that you can use. Make sure that the colour names are specified in the exact letter case shown in the table. ``Apricot`` will work, ``apricot`` will not. Some colours, ``blue``, ``black`` seem ok, but stick with the table's defined names to avoid problems.
 
-It is accepted standard, that the colour of links, table of contents and URLs should be Gr\ *a*\ y. Or, as people who *can* speak proper English would say, Gr\ *e*\ y - but that gets rejected by the US-centric software. Pah! ;-)
+**Note**: If you want to use the above named colours, you cannot use the ``--listings`` command line option. You have a choice, one or the other! But, all you have to do is go to <http://latexcolor.com/>, find the colours you need, and add something like the following to the listings_setup.tex file:
+
+..  code-block:: latex
+
+    \definecolor{Cool Grey}{rgb}{0.55,0.57,0.67}
+    \definecolor{Blue}{rgb}{0,0,1}
+    \definecolor{Lava}{rgb}{0.81,0.06,0.13}
+    \definecolor{Ao}{rgb}{0,0.5,0}
+    \definecolor{Cobalt}{rgb}{0,0.28,0.67}
+
+Now, you can use any of the above named colours in the listings_setup.tex file, or, on the command line to set link colours etc. Easy!    
+
+It is accepted standard, that the colour of links, table of contents and URLs should be Gr\ **a**\ y. Or, as people who *can* speak proper English would say, Gr\ **e**\ y - but that gets rejected by the US-centric software. Pah! ;-)
 
 Personally, I prefer Blue. Yah, boo sucks! I also prefer the output when using the *Utopia* font family over the default "Latin Modern". I also use the ``listings`` package when generating PDF files, so there needs to be a setup file used - otherwise I get all the wrong options.
 
