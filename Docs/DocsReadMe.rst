@@ -92,7 +92,7 @@ See <https://en.wikibooks.org/wiki/LaTeX/Colors#Predefined_colors> for details a
 
 It is accepted standard, that the colour of links, table of contents and URLs should be Gr\ *a*\ y. Or, as people who *can* speak proper English would say, Gr\ *e*\ y - but that gets rejected by the US-centric software. Pah! ;-)
 
-Personally, I prefer Blue. Yah, boo sucks!
+Personally, I prefer Blue. Yah, boo sucks! I also prefer the output when using the *Utopia* font family over the default "Latin Modern".
 
 The following code is *all on one line* ...
 
@@ -105,6 +105,7 @@ The following code is *all on one line* ...
            --output Readme.pdf 
            --table-of-contents 
            --toc-depth=3 
+           --variable fontfamily="Utopia"
            --variable toccolor=Blue 
            --variable linkcolor=Blue 
            --variable urlcolor=Blue 
