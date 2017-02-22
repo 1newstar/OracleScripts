@@ -42,7 +42,19 @@ DatabaseHandover
     
 RMANRestore
     How to restore an RMAN backup, taken on one server, to a new database on another server (or a compatible kind) using 11g RMAN. Also details how to identify the files required - given RMAN's interesting naming style! Basically, this is a &how to determine if your backups can be restored* document for DBAs.
+
+RMANCloning
+    How to use RMAN to create a new database, or, refresh an existing one, from a staging database.
+
+SOP_DataGuardFailover
+    How to use Data Guard to fail, or switch, over between a currently running primary to a standby database.
     
+SOP_ServerPatching
+    How to patch the various servers running in a Data Guard "cluster" - with minimal down time.
+    
+RMANCreateStandby
+    How to create a standby database from a running primary, without having to shutdown the primary.
+
 Readme
     This document, you are reading it now.
     
