@@ -61,6 +61,8 @@ Readme
 Pandoc_reference.docx
     A reference docx file used by pandoc to build Microsoft docx files, with my chosen styles. Mostly! While pandoc does output the correct style information, Word ignores some of it - in-line code and tables, for example.
 
+Listings_setup.tex
+    A file of options for the LaTeX listings package. If you use ``--listings`` on the command line to create a PDF file, you should also include the ``-H ..\listings_setup.tex`` to ensure that the required options are used.
 
 Output - Docx
 -------------
