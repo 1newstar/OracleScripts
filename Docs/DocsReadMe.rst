@@ -78,7 +78,8 @@ The pandoc_reference doc contains examples of the styles you wish to use. The fo
            --output Readme.docx 
            --reference-docx=..\pandoc_reference.docx 
            --table-of-contents 
-           --toc-depth=3 Readme.rst
+           --toc-depth=3 
+           DocsReadMe.rst
 
 If you don't want to set up a style document, then don't and just leave it off the command line - the defaults are a tad boring though! 
 
@@ -94,7 +95,7 @@ See <https://en.wikibooks.org/wiki/LaTeX/Colors#Predefined_colors> for details a
 
 It is accepted standard, that the colour of links, table of contents and URLs should be Gr\ *a*\ y. Or, as people who *can* speak proper English would say, Gr\ *e*\ y - but that gets rejected by the US-centric software. Pah! ;-)
 
-Personally, I prefer Blue. Yah, boo sucks! I also prefer the output when using the *Utopia* font family over the default "Latin Modern".
+Personally, I prefer Blue. Yah, boo sucks! I also prefer the output when using the *Utopia* font family over the default "Latin Modern". I also use the ``listings`` package when generating PDF files, so there needs to be a setup file used - otherwise I get all the wrong options.
 
 The following code is *all on one line* ...
 
@@ -107,6 +108,8 @@ The following code is *all on one line* ...
            --output Readme.pdf 
            --table-of-contents 
            --toc-depth=3 
+           --listings
+           --H ..\listings_setup.tex
            --variable fontfamily="Utopia"
            --variable toccolor=Blue 
            --variable linkcolor=Blue 
@@ -115,7 +118,7 @@ The following code is *all on one line* ...
            --variable margin-left=3cm
            --variable margin-right=3cm
            --variable margin-bottom=4cm
-           Readme.rst
+           DocsReadMe.rst
 
 I *think* PDF output required something like ``pdflatex`` to be installed, and on Windows that's done using MikTeX while on Linux, just install texlive (the full option).
 
