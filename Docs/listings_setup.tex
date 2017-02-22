@@ -1,14 +1,27 @@
 % Contents of listings-setup.tex
+% For colours, see http://latexcolor.com/
+
 \usepackage{xcolor}
+
+% I have to define any colour I wish to use either here
+% or on the command line (for links etc) before it can be used by name
+% either below, or on the command line when specifying colours.
+
+\definecolor{Cool Grey}{rgb}{0.55,0.57,0.67}
+\definecolor{Blue}{rgb}{0,0,1}
+\definecolor{Lava}{rgb}{0.81,0.06,0.13}
+\definecolor{Ao}{rgb}{0,0.5,0}
+\definecolor{Cobalt}{rgb}{0,0.28,0.67}
 
 \lstset{
     basicstyle=\ttfamily,
     numbers=left,
-    %morekeywords={spfile,pfile,oraenv,sqlplus,sysdba,show,parameter,startup,shutdown,open,close,mount,nomount,database,flashback,archivlog,noarchivelog},
-    keywordstyle=\color[rgb]{0,0,1}\bfseries,
-    stringstyle=\color[rgb]{0.81,0.06,0.13},
-    commentstyle=\color[rgb]{0,0.5,0}\itshape,
-    identifierstyle=\color[rgb]{0,0.28,0.67},
+    frame=shadowbox,
+    rulesepcolor=\color{Cool Grey},
+    keywordstyle=\color{Blue}\bfseries,
+    stringstyle=\color{Lava},
+    commentstyle=\color{Ao},
+    identifierstyle=\color{Cobalt},
     numberstyle=\footnotesize,
     stepnumber=1,
     numbersep=5pt,
