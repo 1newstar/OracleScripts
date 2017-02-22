@@ -45,8 +45,8 @@ be restarted using an spfile.
 
 ..  code-block:: sql
 
-    create spfile=’?\database\spfileT_DB.ora’ from pfile;
-    startup force pfile=’?\database\spfileT_DB.ora’
+    create spfile='?\database\spfileT_DB.ora' from pfile;
+    startup force pfile='?\database\spfileT_DB.ora'
 
 This database must also be running in ``ARCHIVELOG`` mode. This can be checked by:
 
@@ -140,7 +140,7 @@ Start A_DB in ``NOMOUNT`` mode. It must be started using a pfile, *not* an spfil
     oraenv A_DB
     sqlplus sys/password as sysdba
 
-    startup nomount pfile=’?\database\initA_DB.ora'
+    startup nomount pfile='?\database\initA_DB.ora'
     exit
     
    
@@ -171,7 +171,7 @@ workaround for when this parameter wasn't originally used - just in case!
 
 It is possible, perhaps desirable, to increase the number of disk, but
 not auxiliary, channels as this aids in the parallelism of the clone
-process. However, don’t allocate too many or you may swamp the network
+process. However, don't allocate too many or you may swamp the network
 reducing efficiency. Five disk channels would probably be about the
 maximum advised.
 
