@@ -14,18 +14,18 @@ In this example, CFG will be cloned to a new database, CFGSB, but
 the clone will have the same ``DB_NAME`` initialisation parameter and DBID
 as the CFG database. This is standard for standby databases.
 
-**Note:** To identify which database your session may be connected to,
-do not use ``NAME`` from ``V$DATABASE``, use ``DB_UNIQUE_NAME`` instead. The
-following shows that we are connected to the standby database, CFGSB
-and that it has the same db_name as the primary, CFG:
+    **Note:** To identify which database your session may be connected to,
+    do not use ``NAME`` from ``V$DATABASE``, use ``DB_UNIQUE_NAME`` instead. The
+    following shows that we are connected to the standby database, CFGSB
+    and that it has the same db_name as the primary, CFG:
 
-..  code-block:: sql
+    ..  code-block:: sql
 
-    select name, db_unique_name from v$database;
+        select name, db_unique_name from v$database;
 
-    NAME     DB_UNIQUE_NAME
-    -------- -----------------
-    CFG      CFGSB
+        NAME     DB_UNIQUE_NAME
+        -------- -----------------
+        CFG      CFGSB
 
 
 Terminology
@@ -57,7 +57,7 @@ most efficient shutdowns, immediate is advised.
 
 ..  code-block:: batch
 
-    oradim –edit –sid CFG -startmode manual –shutmode
+    oradim -edit -sid CFG -startmode manual -shutmode
     immediate
 
     
@@ -465,7 +465,7 @@ appropriately, then enter the following command, all on one line:
 ..  code-block:: batch
 
     oraenv cfgsb
-    oradim -new -sid cfgsb -startmode manual –shutmode
+    oradim -new -sid cfgsb -startmode manual -shutmode
     immediate
 
     
@@ -533,7 +533,7 @@ Start the standby instance:
 
 ..  code-block:: sql
 
-    -- It may have been started by oradim above, so …
+    -- It may have been started by oradim above, so ...
     shutdown
     startup nomount pfile='?\database\initcfgsb.ora'
     exit
@@ -545,7 +545,7 @@ Update the Standby Tnsnames.ora
 The ``tnsnames.ora`` file on the standby server must have an entry for the
 primary and the new standby databases added.
 
-Test – you must be able to connect to the SYS user, as SYSDBA, from
+Test - you must be able to connect to the SYS user, as SYSDBA, from
 *both* servers to *both* databases.
 
 
@@ -585,7 +585,7 @@ and to avoid having the auxiliary database have parameter settings that refer to
 
 It will list the "from" values required for any or all of the parameters listed above, depending on the target database configuration. If a parameter is missing from the output, then it is not required in the clone commands shown in the next section.
 
-Run the following on the target database to extract the settings. The script runs happily on Windows or flavours of Unix without change:
+Run the following on the target database to extract the settings. The script runs happily on Windows or various flavours of Unix without change:
 
 ..  code-block:: sql
 
@@ -1175,6 +1175,12 @@ after a reboot of the primary database, you should replace 'memory' with
 Don't forget to enable the destination after you have finished working
 on the standby again!
 
+    **Note**: Depending on how long the stoppage is for, it is perfectly possible that your primary database server will fill up the FRA with archived logs as these are not being deleted by RMAN due to the setting of the ``ARCHIVELOG DELETION POLICY`` which requires them to be *applied to all standby*.
+
+    In this case, you may be wise to amend that setting to something like *backed up 2 times* or similar to keep the FRA clear of wasteful files, and, to allow you to restore them to the *primary* server at some point in the future to enable the standby to fetch them on request when we restart managed recovery.
+
+    If you don't have safe copies of the archived logs for the whole period that the standby has been disabled, you will have to recreate the standby from scratch.
+
 
 Create an Application Service
 =============================
@@ -1285,9 +1291,9 @@ are currently in use by the primary database:
 The primary database is now running with two separate service names,
 CFG and CFGSVC. This is as desired.
 
-**Note**: It has been seen on a number of occasions that the CFG service 
-name does not appear in the above output. This can be ignored as any TNS
-alias set up to point at the CFG service will still work.
+    **Note**: It has been seen on a number of occasions that the CFG service 
+    name does not appear in the above output. This can be ignored as any TNS
+    alias set up to point at the CFG service will still work.
 
 
 Ensure That the Service Only Runs on the Primary
@@ -1792,10 +1798,10 @@ Disabling the Standby Database
 In order to disable the standby database, you need to:
 
 -  Cancel managed recovery and DEFER the primary database's
-   ``log_archive_dest_2`` – see *Stopping Managed
+   ``log_archive_dest_2`` - see *Stopping Managed
    Recovery*.
 
--  Turn off Data Guard, if in use – see *Stopping the DG
+-  Turn off Data Guard, if in use - see *Stopping the DG
    Broker*.
 
    

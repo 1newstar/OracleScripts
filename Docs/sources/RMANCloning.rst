@@ -182,6 +182,123 @@ target database files with auxiliary database files - if yo somehow managed to m
 
 This parameter *must never* be specified when cloning to the *same* server.
 
+Pre-Cloning Script Edits
+------------------------
+
+The code shown below to clone a database must be edited to replace the target and auxiliary database drive letters, and paths, for the following:
+
+- ``PARAMETER_VALUE_CONVERT``
+- ``DB_FILE_NAME_CONVERT``
+- ``LOG_FILE_NAME_CONVERT``.
+
+To avoid any omissions that *will* cause later problems when opening the auxiliary database, 
+and to avoid having the auxiliary database have parameter settings that refer to the target database name, the script below may be helpful.
+
+It will list the "from" values required for any or all of the parameters listed above, depending on the T_DB configuration. If a parameter is missing from the output, then it is not required in the clone commands file.
+
+Run the following on the target database to extract the settings. The script runs happily on Windows or flavours of Unix without change:
+
+..  code-block:: sql
+
+    -- Check for DATA FILES...
+    -- Uses '\' for Windows and '/' for UNIX.
+    -- Use the output to set up DB_FILE_NAME_CONVERT's "from" values.
+    --
+    with db as (
+    --
+        select distinct  
+               substr(file_name, 0, instr(file_name, '\', -1)) as value
+        from dba_data_files 
+        union all
+        select distinct substr(file_name, 0, instr(file_name, '/', -1)) 
+        from dba_data_files 
+    ),
+    --
+    redo as (
+    --
+        -- Check for REDO LOG FILES...
+        -- Uses '\' for Windows and '/' for UNIX.
+        -- Use the output to set up LOG_FILE_NAME_CONVERT's "from" values.
+        select distinct  
+               substr(member, 0, instr(member, '\', -1)) as value
+        from v$logfile
+        union all
+        select distinct substr(member, 0, instr(member, '/', -1)) 
+        from v$logfile 
+    ),
+    --
+    param as (
+    --
+        -- Check for database parameters.
+        -- Uses '\' for Windows and '/' for UNIX.
+        -- Use the output to set up PARAMETER_VALUE_CONVERT's "from" values.
+        select distinct  
+               stuff.value as value
+        from (    
+            select name, value
+            from v$parameter
+            where value like '%\%'
+            union all
+            select name, value
+            from v$parameter
+            where value like '%/%'
+        ) stuff
+        where upper(name) not in (
+            'AUDIT_FILE_DEST',
+            'CONTROL_FILES',
+            'DB_RECOVERY_FILE_DEST',
+            'BACKGROUND_DUMP_DEST',
+            'CORE_DUMP_DEST',
+            'DG_BROKER_CONFIG_FILE1',
+            'DG_BROKER_CONFIG_FILE2',
+            'DIAGNOSTIC_DEST',
+            'SPFILE',
+            'STANDBY_ARCHIVE_DEST',
+            'USER_DUMP_DEST',
+            'NLS_DATE_FORMAT'
+        )
+    )
+    --
+    select 'DB_FILE_NAME_CONVERT' as parameter, value from db
+    where value is not null
+    union all
+    select 'LOG_FILE_NAME_CONVERT' as parameter, value from redo
+    where value is not null
+    union all
+    select 'PARAMETER_VALUE_CONVERT' as parameter, value from param
+    where value is not null
+    order by 1,2;
+
+We can ignore any of the following parameters:
+
+- ``AUDIT_FILE_DEST``
+- ``CONTROL_FILES``
+- ``DB_RECOVERY_FILE_DEST``
+-   Anything that lives in ``%ORACLE_BASE%`` or ``%ORACLE_HOME%``. These usually include:
+
+    - ``BACKGROUND_DUMP_DEST``
+    - ``CORE_DUMP_DEST``
+    - ``DG_BROKER_CONFIG_FILE%``
+    - ``DIAGNOSTIC_DEST``
+    - ``SPFILE``
+    - ``STANDBY_ARCHIVE_DEST``
+    - ``USER_DUMP_DEST``
+
+- ``NLS_DATE_FORMAT`` :-)  
+
+These are explicitly set by the ``RMAN`` commands to create the clone database 
+or default to acceptable values when the database is created and/or opened.
+
+The output from the above will resemble the following:
+
+..  code-block::
+
+    PARAMETER               VALUE
+    ----------------------- -----------------------------------
+    DB_FILE_NAME_CONVERT    G:\MNT\ORADATA\AZSTG02\
+    LOG_FILE_NAME_CONVERT   G:\MNT\ORADATA\AZSTG02\
+    LOG_FILE_NAME_CONVERT   H:\MNT\FAST_RECOVERY_AREA\AZSTG02\
+
 
 Cloning A Staging Database to the Same Server
 =============================================
@@ -201,9 +318,11 @@ like ``clone_A_DB.rman``, then open the file in your favourite editor (alternati
 - Replace all occurrences of 'A_DB' with the name of the auxiliary database.
 - Replace all occurrences of 'T_DB' with the name of the target database.
 
-Connect to ``RMAN`` using a password for both the target and auxiliary
-databases. There must also be a ``tnsnames.ora`` alias used for the
-auxiliary database. For best results, use one on both databases:
+
+Once the code shown below has been edited accordingly, connect to ``RMAN`` using 
+a password for both the target and auxiliary databases. There must also be 
+a ``tnsnames.ora`` alias used for the auxiliary database. For best results, 
+use one on both databases:
 
 ..  code-block:: batch
 
@@ -236,7 +355,7 @@ auxiliary database. For best results, use one on both databases:
         set dispatchers '(PROTOCOL=TCP) (SERVICE=A_DBXDB)'
         set audit_file_dest ' C:\ORACLEDATABASE\ADMIN\A_DB\ADUMP'
         set db_recovery_file_dest 'a:\mnt\fast_recovery_area'
-        set dg_broker_start 'true'
+        set dg_broker_start 'false'
         set control_files
             'a:\mnt\oradata\A_DB\control01.ctl',
             'a:\mnt\fast_recovery_area\A_DB\control02.ctl'
