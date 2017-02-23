@@ -571,6 +571,124 @@ On Standby Server
     sqlplus sys/<password>@CFGSB as sysdba
 
     
+Configure the Clone Script
+--------------------------
+
+The code shown below (in *Create the Standby Database*) to clone a database must be edited to replace the target and auxiliary database drive letters, and paths, for the following:
+
+- ``PARAMETER_VALUE_CONVERT``
+- ``DB_FILE_NAME_CONVERT``
+- ``LOG_FILE_NAME_CONVERT``.
+
+To avoid any omissions that *will* cause later problems when opening the auxiliary database, 
+and to avoid having the auxiliary database have parameter settings that refer to the target database name, the following script may be helpful.
+
+It will list the "from" values required for any or all of the parameters listed above, depending on the target database configuration. If a parameter is missing from the output, then it is not required in the clone commands shown in the next section.
+
+Run the following on the target database to extract the settings. The script runs happily on Windows or flavours of Unix without change:
+
+..  code-block:: sql
+
+    -- Check for DATA FILES...
+    -- Uses '\' for Windows and '/' for UNIX.
+    -- Use the output to set up DB_FILE_NAME_CONVERT's "from" values.
+    --
+    with db as (
+    --
+        select distinct  
+               substr(file_name, 0, instr(file_name, '\', -1)) as value
+        from dba_data_files 
+        union all
+        select distinct substr(file_name, 0, instr(file_name, '/', -1)) 
+        from dba_data_files 
+    ),
+    --
+    redo as (
+    --
+        -- Check for REDO LOG FILES...
+        -- Uses '\' for Windows and '/' for UNIX.
+        -- Use the output to set up LOG_FILE_NAME_CONVERT's "from" values.
+        select distinct  
+               substr(member, 0, instr(member, '\', -1)) as value
+        from v$logfile
+        union all
+        select distinct substr(member, 0, instr(member, '/', -1)) 
+        from v$logfile 
+    ),
+    --
+    param as (
+    --
+        -- Check for database parameters.
+        -- Uses '\' for Windows and '/' for UNIX.
+        -- Use the output to set up PARAMETER_VALUE_CONVERT's "from" values.
+        select distinct  
+               stuff.value as value
+        from (    
+            select name, value
+            from v$parameter
+            where value like '%\%'
+            union all
+            select name, value
+            from v$parameter
+            where value like '%/%'
+        ) stuff
+        where upper(name) not in (
+            'AUDIT_FILE_DEST',
+            'CONTROL_FILES',
+            'DB_RECOVERY_FILE_DEST',
+            'BACKGROUND_DUMP_DEST',
+            'CORE_DUMP_DEST',
+            'DG_BROKER_CONFIG_FILE1',
+            'DG_BROKER_CONFIG_FILE2',
+            'DIAGNOSTIC_DEST',
+            'SPFILE',
+            'STANDBY_ARCHIVE_DEST',
+            'USER_DUMP_DEST',
+            'NLS_DATE_FORMAT'
+        )
+    )
+    --
+    select 'DB_FILE_NAME_CONVERT' as parameter, value from db
+    where value is not null
+    union all
+    select 'LOG_FILE_NAME_CONVERT' as parameter, value from redo
+    where value is not null
+    union all
+    select 'PARAMETER_VALUE_CONVERT' as parameter, value from param
+    where value is not null
+    order by 1,2;
+
+We can ignore any of the following parameters:
+
+- ``AUDIT_FILE_DEST``
+- ``CONTROL_FILES``
+- ``DB_RECOVERY_FILE_DEST``
+-   Anything that lives in ``%ORACLE_BASE%`` or ``%ORACLE_HOME%``. These usually include:
+
+    - ``BACKGROUND_DUMP_DEST``
+    - ``CORE_DUMP_DEST``
+    - ``DG_BROKER_CONFIG_FILE%``
+    - ``DIAGNOSTIC_DEST``
+    - ``SPFILE``
+    - ``STANDBY_ARCHIVE_DEST``
+    - ``USER_DUMP_DEST``
+
+- ``NLS_DATE_FORMAT`` :-)  
+
+These are explicitly set by the ``RMAN`` commands to create the clone database 
+or default to acceptable values when the database is created and/or opened.
+
+The output from the above will resemble the following:
+
+..  code-block::
+
+    PARAMETER               VALUE
+    ----------------------- ------------------------------
+    DB_FILE_NAME_CONVERT    G:\MNT\ORADATA\CFG\
+    LOG_FILE_NAME_CONVERT   G:\MNT\ORADATA\CFG\
+    LOG_FILE_NAME_CONVERT   H:\MNT\FAST_RECOVERY_AREA\CFG\
+
+
 Create the Standby Database
 ---------------------------
 
@@ -628,8 +746,8 @@ Run the following command:
         set log_file_name_convert
             'G:\mnt\oradata\CFG',
             'G:\mnt\oradata\CFGSB',
-            'G:\mnt\fast_recovery_area\CFG',
-            'G:\mnt\fast_recovery_area\CFGSB'
+            'H:\mnt\fast_recovery_area\CFG',
+            'H:\mnt\fast_recovery_area\CFGSB'
         set log_archive_dest_1
             'location=use_db_recovery_file_dest
             valid_for=(all_logfiles,all_roles) db_unique_name=CFGSB'
