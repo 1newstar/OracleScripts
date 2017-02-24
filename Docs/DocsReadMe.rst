@@ -28,35 +28,41 @@ Why RST? Well, it was that or Markdown, and I'm more used to RST but also, these
 Documents Included
 ------------------
 
-9iRestore
-    A document that details how to revert an 11g database in the Azure cloud (aka The *Fog*), running on Windows, back to a 9i database running on Solaris, and not in the cloud.
-    
-DatabaseHandover
-    Handover document for when my contract expires and some other victim has to take on my work.
-    
 00 Using DBCA to Build Initial Databases
     Using Oracle's DBCA to build an initial blank database ready to be upgraded to a full sized UV database.
 
 01 Building UV Databases
     Upgrading a blank DBCA created database with various scripts, to resemble a full sized UV database, ready for importing of the data.
     
-RMANRestore
-    How to restore an RMAN backup, taken on one server, to a new database on another server (or a compatible kind) using 11g RMAN. Also details how to identify the files required - given RMAN's interesting naming style! Basically, this is a &how to determine if your backups can be restored* document for DBAs.
+9iRestore
+    A document that details how to revert an 11g database in the Azure cloud (aka The *Fog*), running on Windows, back to a 9i database running on Solaris, and not in the cloud.
+    
+BrokenLatex
+    Some wise words on making stuff work when converting RST to Latex/pdf.
+    
+DatabaseHandover
+    Handover document for when my contract expires and some other victim has to take on my work.
+    
+MigrationChecklist
+    Checklist of the steps required to migrate from Solaris to 11g Windows (in the Fog), or, to refresh an Azure database from a Solaris 9i export.
+
+MigrationPlan
+    Detailed description of how to run the 9i Solaris to 11g Windows (in the Fog) migration. Step, by, step!
 
 RMANCloning
     How to use RMAN to create a new database, or, refresh an existing one, from a staging database.
+
+RMANCreateStandby
+    How to create a standby database from a running primary, without having to shutdown the primary.
+
+RMANRestore
+    How to restore an RMAN backup, taken on one server, to a new database on another server (or a compatible kind) using 11g RMAN. Also details how to identify the files required - given RMAN's interesting naming style! Basically, this is a &how to determine if your backups can be restored* document for DBAs.
 
 SOP_DataGuardFailover
     How to use Data Guard to fail, or switch, over between a currently running primary to a standby database.
     
 SOP_ServerPatching
     How to patch the various servers running in a Data Guard "cluster" - with minimal down time.
-    
-RMANCreateStandby
-    How to create a standby database from a running primary, without having to shutdown the primary.
-
-Readme
-    This document, you are reading it now.
     
 Pandoc_reference.docx
     A reference docx file used by pandoc to build Microsoft docx files, with my chosen styles. Mostly! While pandoc does output the correct style information, Word ignores some of it - in-line code and tables, for example.
@@ -132,7 +138,7 @@ The following code is *all on one line* ...
            --variable margin-bottom=4cm
            DocsReadMe.rst
 
-I *think* PDF output required something like ``pdflatex`` to be installed, and on Windows that's done using MikTeX while on Linux, just install texlive (the full option).
+PDF output requires something like ``pdflatex`` to be installed, and on Windows that's done using ``MikTeX`` while on Linux, just install ``texlive`` (the full option).
 
 
 Other Outputs
