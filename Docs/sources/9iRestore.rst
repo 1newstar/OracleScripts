@@ -122,7 +122,7 @@ The *run_11g_preparation.sql* script can be re-run at will without any special c
 The 9i database must also be prepared to receive the import from 11g.
 
 - Generate a privileges script to be run after the import;
-- Drop the users' tables;
+- Drop *most* of the users' tables;
 
 The script *run_9i_preparation.sql* carries out the above work. After the import, the following are required:
 
@@ -147,7 +147,7 @@ The scripts *post_9i_import.sql* and *materialised_views.sql* carry out the abov
 In Detail - 9i
 --------------
 
-The 9i database should have all its *application* tables and sequences dropped prior to the imports.
+The 9i database should have all its *application* tables, apart from the FCS.XML_FATCA_REPORTS and FCS."UKFATCASUBMISSIONFIRE98_TAB", and all sequences etc dropped prior to the imports. Indexes, triggers etc attached to the two exception tables should not be dropped.
 
 This should be done by checking the export parameter file for the original NOROWS export, the file in question is the *exp_rows_NOFCS.par* one. In that file you will find a list of user accounts *similar* to the following:
 
@@ -166,7 +166,7 @@ These users, *plus FCS*, are the ones you need to clear out in preparation for r
 9i Preparation Script
 ---------------------    
 
-A script has been supplied, *run_9i_preparation.sql*, which will drop all tables in those selected schemas (plus the FCS schema) and drop any sequences owned by the various schemas.
+A script has been supplied, *run_9i_preparation.sql*, which will drop all required tables in those selected schemas (plus the FCS schema) and drop any sequences etc owned by the various schemas.
 
 **You must ensure that the list of schemas in the *run_9i_preparation.sql* script and in the sub-script, *generate_9i_privileges.sql*, matches those in the NOFCS export parameter file, plus FCS.**
 
