@@ -43,6 +43,9 @@ BrokenLatex
 DatabaseHandover
     Handover document for when my contract expires and some other victim has to take on my work.
     
+GeneratingEXPParameterFiles
+    How to install and use the 9i package that generates the desired ``exp`` parameter files to assist in parallelising the exports from Solaris 9i, and the imports on Azure 11g.
+    
 MigrationChecklist
     Checklist of the steps required to migrate from Solaris to 11g Windows (in the Fog), or, to refresh an Azure database from a Solaris 9i export.
 
