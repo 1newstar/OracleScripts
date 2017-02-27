@@ -46,7 +46,7 @@ be restarted using an spfile.
 ..  code-block:: sql
 
     create spfile='?\database\spfileT_DB.ora' from pfile;
-    startup force pfile='?\database\spfileT_DB.ora'
+    startup force
 
 This database must also be running in ``ARCHIVELOG`` mode. This can be checked by:
 
