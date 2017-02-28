@@ -67,6 +67,9 @@ SOP_DataGuardFailover
 SOP_ServerPatching
     How to patch the various servers running in a Data Guard "cluster" - with minimal down time.
     
+UsingAndMonitoringTheFRA
+    How to monitor the usage, and self cleaning properties of the FRA for a database.
+
 Pandoc_reference.docx
     A reference docx file used by pandoc to build Microsoft docx files, with my chosen styles. Mostly! While pandoc does output the correct style information, Word ignores some of it - in-line code and tables, for example.
 
