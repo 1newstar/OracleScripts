@@ -165,7 +165,14 @@ Leeds DBA Tasks
 
 -  **Edit the script** (supplied by the production DBAs)
    *Scripts\\T095\_RecreatePublic\_DB\_Links.*\ sql to remove the
-   CFGTEST database link.
+   CFGTEST database link, and, edit the ``using`` part of the CFGAUD_LINK 
+   to connect to the correct, Azure specific, CFGAUDIT database, which is ``CFGAUDSRV``:
+   
+   ..  code-block:: sql
+   
+         create public database link CFGAUDIT_LINK.US.ORACLE.COM 
+         connect to AUDITU identified by "*********" 
+         using 'CFGAUDSRV';
 
 -  **Edit the script** supplied by the production DBAs,
    *Scripts\\T150a\_create\_roles.sql*. Look for "**alter user fcs**"
