@@ -143,7 +143,7 @@ If you have administrator rights on the server, and you should have, use ``reged
 Useful Scripts
 ==============
 
-I've created a few potentially useful utility scripts to make life under Windows a little easier for the Unix afficianados among us. They are all to be found in ``c:\scripts`` and are as follows:
+I've created a few potentially useful utility scripts to make life under Windows a little easier for the Unix aficionados among us. They are all to be found in ``c:\scripts`` and are as follows:
 
 
 Oraenv script
@@ -380,7 +380,7 @@ Alternatively, you may use the Windows services utility to stop and start the Or
 Stopping Services
 ~~~~~~~~~~~~~~~~~
 
-Stopping a service will stop the database. The database will be closed in a manner that is configurable with ``oradim`` or the Administrative Assistant for Windows utilty as supplied by Oracle. Our databases are configured to shutdown ``IMMEDIATE``. However, it is best practice to close the database before stopping it with the service, just in case.
+Stopping a service will stop the database. The database will be closed in a manner that is configurable with ``oradim`` or the Administrative Assistant for Windows utility as supplied by Oracle. Our databases are configured to shutdown ``IMMEDIATE``. However, it is best practice to close the database before stopping it with the service, just in case.
 
 Services are stopped thus:
 
@@ -399,7 +399,7 @@ For example:
     ...
     net stop OracleServicePPDCFG
 
-Alternatively, you may use the Windows services utility to stop and start the Oracle services. This doesn't require adminsitrator rights.
+Alternatively, you may use the Windows services utility to stop and start the Oracle services. This doesn't require administrator rights.
 
 
 SQLNET.ORA
@@ -524,7 +524,7 @@ Only the primary running database starts the appropriate service, the standby da
     end;
     /
 
-We *attempt* to be consistent in the naming of services etc. In this example, the service is ``cfgsrv`` because the *primary database* is named CFG. So the service name is always, or at least, wherever possible, the primary database name plus 'srv'. The truigger name is therefore the service_name with '_trigger' tagged on.
+We *attempt* to be consistent in the naming of services etc. In this example, the service is ``cfgsrv`` because the *primary database* is named CFG. So the service name is always, or at least, wherever possible, the primary database name plus 'srv'. The trigger name is therefore the service_name with '_trigger' tagged on.
     
     
 The services currently in use are:
@@ -553,19 +553,19 @@ RMAN
 Backup Drive
 ------------
 
-**Note:** Where the ``R:\`` drive is mentioned below, this was correct at the time of writing, however, this remains subject to change.
+**Note:** Where the ``Z:\`` drive is mentioned below, this was correct at the time of writing, however, this remains subject to change.
 
-The ``R:\`` drive has been setup as the main RMAN backup device. This is currently 3TB in size, but this will need to be monitored as normal running starts to take place. Especially as the retention period for the production database has been set to 7 years and a day! (2558).
+The ``Z:\`` drive has been setup as the main RMAN backup device. This is currently 3TB in size, but this will need to be monitored as normal running starts to take place. Especially as the retention period for the production database has been set to 7 years and a day! (2558).
 
 This drive is *not visible* in Windows File Explorer except to the various service users, it will not appear in Windows File Explorer unless you are logged in as the user.
 
-You can, however, map a network drive to ``R:\`` in your own user. The full path is ``\\BACKMAN01\RMANBACKUP``. This allows you to read and write to the drive, assuming Windows permissions allow of course.
+You can, however, map a network drive to ``Z:\`` in your own user. The full path is ``\\BACKMAN01\RMANBACKUP``. This allows you to read and write to the drive, assuming Windows permissions allow of course.
 
-RMAN *cannot* backup to the (mapped) ``R:\`` drive for some reason. It can, backup to the full UNC path, so all format clauses in the RMAN backup scripts must use the full UNC path, rather than ``R:\`` as the following example demonstrates:
+RMAN *cannot* back up to the (mapped) ``Z:\`` drive for some reason. It can, however, backup to the full UNC path, so all format clauses in the RMAN backup scripts *must* use the full UNC path, rather than ``Z:\`` as the following example demonstrates:
 
 ..  code-block:: 
 
-    RMAN> backup format '\backman01\RMANBackup\backups\cfgrmn\test_%U%T' spfile;
+    RMAN> backup format '\\backman01\RMANBackup\backups\cfgrmn\test_%U%T' spfile;
 
     Starting backup at 2016/11/17 10:54:39
     ...
@@ -578,7 +578,7 @@ RMAN *cannot* backup to the (mapped) ``R:\`` drive for some reason. It can, back
 
 
 
-    RMAN> backup format 'r:\backups\cfgrmn\test_%U%T' spfile;
+    RMAN> backup format 'Z:\backups\cfgrmn\test_%U%T' spfile;
 
     Starting backup at 2016/11/17 10:55:05
     ...
@@ -587,7 +587,7 @@ RMAN *cannot* backup to the (mapped) ``R:\`` drive for some reason. It can, back
     RMAN-00569: =============== ERROR MESSAGE STACK FOLLOWS ===============
     RMAN-00571: ===========================================================
     RMAN-03009: failure of backup command on ORA_DISK_1 channel at 11/17/2016 10:55:06
-    ORA-19504: failed to create file "R:\BACKUPS\CFGRMN\TEST_3GRL4QK9_1_120161117"
+    ORA-19504: failed to create file "Z:\BACKUPS\CFGRMN\TEST_3GRL4QK9_1_120161117"
     ORA-27040: file create error, unable to create file
     OSD-04002: unable to open file
     O/S-Error: (OS 3) The system cannot find the path specified.
@@ -609,10 +609,10 @@ CFG
     CONFIGURE RETENTION POLICY TO REDUNDANCY 2558;
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
-    CONFIGURE CONTROLFILE AUTOBACKUP FORMAT FOR DEVICE TYPE DISK TO 'j:\backups\cfg\%F';
+    CONFIGURE CONTROLFILE AUTOBACKUP FORMAT FOR DEVICE TYPE DISK TO '\\backman01\RMANBackup\backups\cfg\autobackup\%F';
     CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
 
-**Note** the location of the autobackup of the controlfile is subject to change as and when the backup devices, aka the ``R:\`` drive, are fully up and working.
+**Note** the location of the autobackup of the controlfile is subject to change as and when the backup devices, aka the ``Z:\`` drive, are fully up and working.
 
 
 CFGAUDIT
@@ -624,6 +624,7 @@ CFGAUDIT
     CONFIGURE RETENTION POLICY TO REDUNDANCY 2558;
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
+    CONFIGURE CONTROLFILE AUTOBACKUP FORMAT FOR DEVICE TYPE DISK TO '\\backman01\RMANBackup\backups\cfgaudit\autobackup\%F';
     CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
 
     
@@ -636,7 +637,8 @@ CFGRMN
     CONFIGURE RETENTION POLICY TO REDUNDANCY 31;
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
-    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
+        CONFIGURE CONTROLFILE AUTOBACKUP FORMAT FOR DEVICE TYPE DISK TO '\\backman01\RMANBackup\backups\cfgrmn\autobackup\%F';
+CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
 
     
 PPDCFG
@@ -679,14 +681,17 @@ Both databases have the same catalog username - ``rman11g`` and the password is 
 Daily Backups
 -------------
 
+**Note**: Due to *foibles* in the way that the application needs certain settings within ``sqlnet.ora`` to be set, we must always login to the databases with a username and password. This includes running backups etc. To this end, the SYS password on the databases, if changed, must be reflected in the settings used to carry out a backup in the  Windows Task Scheduler.
+
 Daily backups are configured to take place 7 days a week, with a level 0 incremental backup taking place on Sunday. Every other day of the week will carry out an incremental level 1 backup.
 
 This is slightly different from the old 9i regime where levels 2 through 4 existed in RMAN, but as these are no longer provided at 11g, the choice is level 0 or level 1 only.
 
 Craig has a diagram of the RMAN backup environment, but in summary:
 
--  RMAN backs up the database to a mapped drive. This is mapped on all
-   servers as the same disk, but only within the service user account by
+-  RMAN backs up the database to a specific drive. This is mapped on all
+   servers as the same disk, ``\\backman01\rmanbackups\``, but only within 
+   the service user's account by
    default, so there's no problem if we switch from backing up the
    primary to backing up the standby, or the DR databases.
 -  The backups are kept on disc for two months. (This may be subject to
@@ -773,7 +778,7 @@ As mentioned above, there are a number of useful backup scripts, located in the 
 BackupDatabase.cmd
 ^^^^^^^^^^^^^^^^^^
 
-This script can be used to backup any database on the server. It is used by the Windows task scheduler to backup each and every database that is configured for regular scheduled backups.
+This script can be used to backup any database on the server. It is used by the Windows task scheduler to backup each and every database that is configured for regular scheduled backups. It is the command line for this script, that is called from within the Task Scheduler, that needs to have the SYS password changed if the database user's password is changed.
 
 The script takes up to 4 parameters:
 
