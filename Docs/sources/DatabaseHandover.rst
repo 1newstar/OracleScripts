@@ -911,7 +911,7 @@ The table names should indicate which job they are used by. Any desired reports 
 Password Changes
 ================
 
-After handover, there will be a need for stronger security measures in the database. The passwords for the following users have been set to a working password, and will require changing after handover. Obviously, existing processes for changing passwords of affected database links etc will need to be followed.
+After handover, there will be a need for stronger security measures in the database. Some passwords have been set to a working password, and will require changing after handover. Obviously, existing processes for changing passwords of affected database links etc will need to be followed.
 
 
 SYS & SYSTEM
@@ -919,37 +919,83 @@ SYS & SYSTEM
 
 The SYS and SYSTEM passwords on all databases are currently using a temporary password. These will all need changing.
 
-**Note:** Any changes to the SYS password will require an edit of the various RMAN backup jobs configured in the Windows Task Scheduler.
+**Note:** Any changes to the SYS password will require an edit of the various RMAN backup jobs configured in the Windows Task Scheduler. From Oracle 12c, however, there is a dedicated role set up to allow a user, not SYS, to be configured to run backups with RMAN. This is not yet possible in 11g.
 
 
 CFGAUDIT
 --------
 
-The FCS password will require changing here. As it will in any database links on other databases pointing here.
+The users in this database are:
+
+- AUDITU. If this password is changed, change the database link CFGAUDIT_LINK@CFG to match.
+- FCS. Unlikely to be connected to. Owns the tables, but updates are done via AUDITU and public synonyms.
+- FCS_READ_ONLY.
+- SYS - When this password is changed, the Windows Task Scheduler jobs that run the backups will need changing too.
 
 
 CFG
 ---
 
-The FCS password will require changing here. As it will in any database links on other databases pointing here.
+The users in this database are:
+
+- CMTEMP.
+- FCS. When this password is changed, the database link CFGLIVE_LINK@CFSAUDIT will need changing to match.
+- ITOPS.
+- ONLOAD. (I suspect this is no longer required.)
+- OEIC_RECALC.
+- UVSCHEDULER. If this password is changed, the scheduler application, amngst others? will need to be changed to match.
+- SYS - When this password is changed, the Windows Task Scheduler jobs that run the backups will need changing too.
 
 
 CFGRMN
 ------
 
-There is a single catalog user, RMAN11G, if the password is changed then the various RMAN backup scripts and dbClone.cmd, in ``c:\scripts`` and ``c:\scripts\RMAN`` will require changing to suit.
+The users in this database are:
+
+- RMAN11G. The catalog user. When the password is changed then the various RMAN backup scripts and ``dbClone.cmd``, in ``c:\scripts`` and ``c:\scripts\RMAN`` will require changing to suit.
+- SYS - When this password is changed, the Windows Task Scheduler jobs that run the backups will need changing too.
 
 
 PPDCFG
 ------
 
-The FCS password will require changing here.
+The users in this database are:
+
+- CMTEMP.
+- FCS.
+- ITOPS.
+- ONLOAD. (I suspect this is no longer required.)
+- OEIC_RECALC.
+- UVSCHEDULER. If this password is changed, the scheduler application, amngst others? will need to be changed to match.
+- SYS - When this password is changed, the Windows Task Scheduler jobs that run the backups will need changing too.
 
 
 PPDCFGRMN
 ---------
 
-There is a single catalog user, ``rman11g``, if the password is changed then the various RMAN backup scripts and ``dbClone.cmd``, in ``c:\scripts`` and ``c:\scripts\RMAN`` will require changing to suit.
+The users in this database are:
+
+- RMAN11G. The catalog user. When the password is changed then the various RMAN backup scripts and ``dbClone.cmd``, in ``c:\scripts`` and ``c:\scripts\RMAN`` will require changing to suit.
+- SYS - When this password is changed, the Windows Task Scheduler jobs that run the backups will need changing too.
+
+
+Database Links
+==============
+
+There are a number of database links in various databases. At the time of migration to Azure, the following were known about:
+
+CFG/CFGSB/CFGDR
+---------------
+
+- CFGAUDIT_LINK - connects to AUDITU@CFGAUDIT and is in use by the scheduled jobs to copy audit data from the production database to the audit database.
+- CFGSB_LINK - connects to FCS@CFGSB, so it will not work. Currently has the incorrect password which was taken directly from 9i live, so it never worked there either. FCS cannot be used to connect to the standby database as it can only be connected to by SYSDBA users.
+- CFGTRAIN_LINK - connects to FCS@CFGTRAIN. As there is no CFGTRAIN database, this link is going nowhere.
+
+
+CFGAUDIT/CFGAUDSB/CFGAUDDR
+--------------------------
+
+CFGLIVE_LINK. Connects to FCS@CFG. Not working as it has the wrong password. It is not known what this link is for.
 
 
 Windows Scheduler Tasks
@@ -996,3 +1042,77 @@ The following tasks have been set up in production.
 -  **PPDRMN\_Level\_1\_Mon\_to\_Sat** - backs up the pre-production RMAN
    catalog database at 21:00 every Monday through Saturday by running a
    level 1 RMAN backup.
+
+   
+Killing Database Sessions
+=========================
+
+When a connection is made to the database, there are two sessions running, the first is the user process,
+the other is a server process. You can find the process ID of the server process for a given
+user process as follows:
+
+..  code-block:: sql
+
+    select  spid
+    from    v$process
+    where   addr = (select  paddr
+                    from    v$session
+                    where   sid = <your_sid>);
+                    
+The ``SID`` number is obviously the SID of the user session that is having difficulties. The returned value
+on a Unix server, where things work properly, is the actual process ID of the server process. Sadly, on
+Azure under Windows, the returned value is a *thread* id, not a process id.
+
+If you kill a process id on Windows, you kill every thread running under it. Also, Task manager only shows
+process ids, not thread ids, which is what we want.
+
+To this end, in ``c:\scripts\ProcessExplorer``, on the database server, you will find a file named ``procexp64.exe`` 
+which you should run as administrator. (Right-click, run as administrator).
+
+Once running:
+
+- Select view->show Process Tree, if necessary.
+- Click on the ``process`` header in the tree that appears. You are sorting by the process name.
+- Scroll down to ``oracle.exe`` there will be at least three, one for each database running.
+- Hover over each in turn and check the hint that pops up, it will show the database name. Find the correct ``oracle.exe`` for the problem database.
+- Double-click the correct ``oracle.exe`` process name.
+
+In the pop-up that appears, go to the ``Threads`` tab. Click OK if you get a pop-up telling
+you that something isn't as fully featured as it might need to be. Now:
+
+- Click the ``TID`` column, to sort by thread id. You might need to do this twice to get the list in the order that you want. 
+- Scroll down till you kind the thread with the id identified by the SQL statement above.
+- Click the thread to select it.
+- Click the ``Kill`` button. The thread should vanish from the list.
+
+That's the server process killed. The user process will still exist, possibly, in the database. So, back in the database:
+
+- Find the session (in Toad I presume) in the Session Browser, and kill it there too.
+- After a short delay, the session should vanish from the session list.
+- Click refresh a couple of times to be sure.
+
+If the database session does not vanish, even after a while, it could be a runaway session. We have seen these on 9i production and on 
+11g production. The only solution is to bounce the database in this case, especially if the session is burning CPU etc.
+
+
+Old DBMS_JOBS
+=============
+
+Anything under FCS that was once seen in DBA_JOBS will no longer be present in 11g. These jobs have been converted to use the
+new (since 10g) DBMS_SCHEDULER.
+
+You should look in DBA_SCHEDULER_JOBS to see details of the jobs, and DBA_SCHEDULER_JOB_LOG to see details of the jobs recent runs, status of same, etc.
+For example:
+
+..  code-block:: sql
+
+    select * from dba_scheduler_job_log
+    where owner = 'FCS'
+    and job_name = 'ALERTS_HEARTBEAT'
+    order by log_date desc;
+
+The above will show the most recent output for the FCS.ALERTS_HEARTBEAT job. With the most recent information at the top.
+
+  
+
+
