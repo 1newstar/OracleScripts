@@ -1,8 +1,12 @@
 .. pandoc -f rst -t docx -o RMANRestore.docx --reference-docx=pandoc_reference.docx --table-of-contents --toc-depth=3 RMANRestore.rst
    is the command that will convert this document to a Word docx file.
    
+.. pandoc -f rst -t pdf -o RMANRestore.pdf --listings -H listings_setup.tex --table-of-contents --toc-depth=3 RMANRestore.rst
+   -- variable tocolor="Cool Grey" -- variable urlcolor="Cool Grey" -- variable linkcolor="Cool Grey" 
+   is the command that will convert this document to a PDF file.
+   
 .. Norman Dunbar
-   November 2016..January 2017.   
+   November 2016..March 2017.   
 
 ======================================================
 RMAN Restores & Backup Validation to Different Servers
@@ -186,13 +190,13 @@ If we need to physically copy the files to the destination server, we need to be
 The output will be something like the following::
 
     ---------- RMAN_TEST_BACKUP.LOG
-        Piece Handle=J:\BACKUPS\CFG\C-2081680004-20161103-01 tag=TAGyadayadayada comment=NONE
-        Piece Handle=J:\BACKUPS\CFG\C-2081680004-20161103-01 tag=TAGyadayadayada comment=NONE
-        Piece Handle=J:\BACKUPS\CFG\2VRJT781_1_1 tag=TAGyadayadayada comment=NONE
-        Piece Handle=J:\BACKUPS\CFG\32RJT7GC_1_1 tag=TAGyadayadayada comment=NONE
-        Piece Handle=J:\BACKUPS\CFG\31RJT7B6_1_1 tag=TAGyadayadayada comment=NONE
-        Piece Handle=J:\BACKUPS\CFG\30RJT794_1_1 tag=TAGyadayadayada comment=NONE
-        Piece Handle=J:\BACKUPS\CFG\2URJT720_1_1 tag=TAGyadayadayada comment=NONE
+    Piece Handle=J:\BACKUPS\CFG\C-2081680004-20161103-01 tag=TAGyadayadayada comment=NONE
+    Piece Handle=J:\BACKUPS\CFG\C-2081680004-20161103-01 tag=TAGyadayadayada comment=NONE
+    Piece Handle=J:\BACKUPS\CFG\2VRJT781_1_1 tag=TAGyadayadayada comment=NONE
+    Piece Handle=J:\BACKUPS\CFG\32RJT7GC_1_1 tag=TAGyadayadayada comment=NONE
+    Piece Handle=J:\BACKUPS\CFG\31RJT7B6_1_1 tag=TAGyadayadayada comment=NONE
+    Piece Handle=J:\BACKUPS\CFG\30RJT794_1_1 tag=TAGyadayadayada comment=NONE
+    Piece Handle=J:\BACKUPS\CFG\2URJT720_1_1 tag=TAGyadayadayada comment=NONE
 
 The list of files output by the command are the database dump files that are required on the destination server.
 
@@ -221,13 +225,13 @@ Now the backup piece names can be extracted from the logfile, as follows::
 The output will resemble this::
 
     ---------- RESTORE_PREVIEW.LOG
-        Piece Name: J:\BACKUPS\CFG\C-2081680004-20161103-01
-        Piece Name: J:\BACKUPS\CFG\C-2081680004-20161103-01
-        Piece Name: J:\BACKUPS\CFG\2VRJT781_1_1
-        Piece Name: J:\BACKUPS\CFG\32RJT7GC_1_1
-        Piece Name: J:\BACKUPS\CFG\31RJT7B6_1_1
-        Piece Name: J:\BACKUPS\CFG\30RJT794_1_1
-        Piece Name: J:\BACKUPS\CFG\2URJT720_1_1
+    Piece Name: J:\BACKUPS\CFG\C-2081680004-20161103-01
+    Piece Name: J:\BACKUPS\CFG\C-2081680004-20161103-01
+    Piece Name: J:\BACKUPS\CFG\2VRJT781_1_1
+    Piece Name: J:\BACKUPS\CFG\32RJT7GC_1_1
+    Piece Name: J:\BACKUPS\CFG\31RJT7B6_1_1
+    Piece Name: J:\BACKUPS\CFG\30RJT794_1_1
+    Piece Name: J:\BACKUPS\CFG\2URJT720_1_1
     
 The first two files have the same name as these will be the spfile and controlfile backups, and in this restore exercise, they are found in the same file.
 
@@ -262,9 +266,10 @@ The preliminary work on the destination server is identical regardless of the ty
 
 - Create backups folders to hold the backups, if it is required to physically copy the files from the source to the destination server;
 - Copy the required backup pieces, and any required archived logs to the backup folder, if the physical backups are required on the destination server;
-- Create an Oracle Service for the destination instance using ``oradim``.
-- Using ``RMAN``, start the instance in NOMOUNT mode;
-- Recover the SPFILE as a PFILE;
+- If necessary, create an Oracle Service for the destination instance using ``oradim``.
+- Create a PFILE for the instance containing only ``DB_NAME=azdba01``, in this example.
+- Using ``RMAN``, start the instance in NOMOUNT mode using the above PFILE;
+- Recover the SPFILE as a PFILE, overwriting the one created above;
 - Edit the PFILE to ensure that parameters are correct for this server & database, and to remove any signs of Data Guard, RAC etc;
 - Start the instance again, in NOMOUNT mode, using the restored and edited PFILE;
 - Restore the controlfiles;
@@ -287,6 +292,10 @@ Are these locations different from the database we are restoring? If so, we need
 Create a new service for the database to be restored, if not already created as part of the server preliminary work detailed above::
 
     oradim -new -sid azdba01 -startmode auto -shutmode immediate
+
+Create a PFILE for this database in ``%oracle_home%\database\`` named ``initAZDBA01.ora``. It will contain only the following::
+
+    db_name=azdba01
     
 
 Mount the Instance
@@ -299,10 +308,13 @@ Set the Oracle environment accordingly, to the new SID::
     set nls_date_format=yyyy/mm/dd hh24:mi:ss
     set nls_lang=american_america.we8iso8859p1
     
-Start RMAN and the instance as follows::
+Start the instance as follows then login to RMAN without a catalog connection::
 
+    sqlplus sys/password as sysdba
+    startup nomount pfile='?\database\initazdba01.ora'
+    exit
+    
     rman target sys/password
-    startup force nomount;
 
 It is assumed that the appropriate backup files are (now) available on the destination server, either copied across (as in this example) or via a full UNC path specification. See *Determining Which Backup Files are Required*, above, for details on how to extract the names of the backup pieces etc that require to be copied from the source server.
     
