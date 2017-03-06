@@ -179,7 +179,24 @@ Once we have an idea of the date and time of the end of the backup we wish to re
 
 If, on the other hand, the source backup files cannot be seen from the destination server, then they need to be identified and physically coped to the destination server into a temporary location. The remainder of this example assumes the latter case.
 
-If we need to physically copy the files to the destination server, we need to be able to identify them. ``RMAN`` can help. Execute the following code in a shell session, on the *source* server::
+If we need to physically copy the files to the destination server, we need to be able to identify them. ``RMAN`` can help, especially if you have the backup log::
+
+    find /i "Piece Handle" <logfile_name> | sort
+
+The output will be something like the following::
+
+    ---------- RMAN_TEST_BACKUP.LOG
+        Piece Handle=J:\BACKUPS\CFG\C-2081680004-20161103-01 tag=TAGyadayadayada comment=NONE
+        Piece Handle=J:\BACKUPS\CFG\C-2081680004-20161103-01 tag=TAGyadayadayada comment=NONE
+        Piece Handle=J:\BACKUPS\CFG\2VRJT781_1_1 tag=TAGyadayadayada comment=NONE
+        Piece Handle=J:\BACKUPS\CFG\32RJT7GC_1_1 tag=TAGyadayadayada comment=NONE
+        Piece Handle=J:\BACKUPS\CFG\31RJT7B6_1_1 tag=TAGyadayadayada comment=NONE
+        Piece Handle=J:\BACKUPS\CFG\30RJT794_1_1 tag=TAGyadayadayada comment=NONE
+        Piece Handle=J:\BACKUPS\CFG\2URJT720_1_1 tag=TAGyadayadayada comment=NONE
+
+The list of files output by the command are the database dump files that are required on the destination server.
+
+If, on the other hand, the log for the appropriate dump is no longer available, execute the following code in a shell session, on the *source* server::
 
     oraenv <source_database>
     rman target sys/<password> catalog rman11g/<password>@rmancatsrv
