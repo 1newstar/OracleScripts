@@ -742,7 +742,7 @@ Run the following command:
         set audit_file_dest 'C:\ORACLEDATABASE\ADMIN\CFGSB\ADUMP'
         set dispatchers '(PROTOCOL=TCP) (SERVICE=CFGSBXDB)'
         set db_recovery_file_dest 'G:\mnt\fast_recovery_area'
-        set dg_broker_start=false
+        set dg_broker_start 'false'
         set log_file_name_convert
             'G:\mnt\oradata\CFG',
             'G:\mnt\oradata\CFGSB',

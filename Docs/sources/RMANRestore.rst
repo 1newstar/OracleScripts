@@ -17,7 +17,9 @@ Abstract
 
 This document shows how the AZDBA01 database was copied from server ORCDEVORC01 to server DEVORC01 using a previously taken ``RMAN`` incremental level 0 backup. As this restore is simply a backup verification and not a restore back to the same place exercise, we must be careful when using the ``RMAN`` catalog.
 
-If, on the other hand, this was an *actual restore*, to the *same location* on the *same server*, life is much easier - we simply connect to the target database and the catalog and issue the following commands::
+If, on the other hand, this was an *actual restore*, to the *same location* on the *same server*, life is much easier - we simply connect to the target database and the catalog and issue the following commands:
+
+..  code-block:: sql
 
     set until .... ;  # SCN, sequence or time ...
     restore database ;
@@ -41,6 +43,8 @@ Server Preparation
 Points to note
 --------------
 
+- You *cannot* restore a backup of a database to a differently named database, even on a different server.
+
 - The server where the database is being restored, in full or just for validation, must have the appropriate version of Oracle Software installed. At present, this is 11.2.0.4 for all databases on all servers so that's currently ok. The versions must match exactly on source and destination servers, you cannot restore a dump taken on an 11.2.0.4 server to an 11.2.0.3 server, for example.
 
 - You need to collect certain information about the source database in order to replicate it on the destination server. This information is usually found in the RMAN backup log, but if that's not available, see the section *Collecting Required Information*, below, for helpful details. 
@@ -62,6 +66,10 @@ Points to note
 - **The catalog must not be used**. If the catalog is connected at any time, the locations used in the restores will be logged against the source database as they will, for the duration of the exercise, have the same DBID. This will mess up the subsequent backups as, for example, archived logs are searched for on non-existent locations on the source server.
 
 - The source database must be configured, in ``RMAN``, to have controlfile autobackups on.
+
+    **You should be aware that the backups for the production and/or preproduction databases are owned by the appropriate service users -  casfs\svc_oracleprod for production, casfs\svc_oracleppd for pre-production - and in order to use them for a restore operation, you must be running as one of these service users. 
+    
+    Files owned by the production user can be read by the pre-production user, as this can facilitate testing that production restores work, if you are running the test on the pre-production servers.
 
 
 Collecting Required Information
@@ -142,7 +150,9 @@ We also require a ``SQL*Plus`` script to rename the online redo logs.
 
 A validation restore doesn't require these scripts and nor does a physical restore to the same locations, even if they are on a different server.
 
-Run the following script, against the source database, as the SYSDBA user, to generate the two separate scripts to carry out the renaming exercise::
+Run the following script, against the source database, as the SYSDBA user, to generate the two separate scripts to carry out the renaming exercise:
+
+..  code-block:: sql
 
     set lines 2000 trimspool on
     set pages 3000 head off feed off
@@ -183,29 +193,35 @@ Once we have an idea of the date and time of the end of the backup we wish to re
 
 If, on the other hand, the source backup files cannot be seen from the destination server, then they need to be identified and physically coped to the destination server into a temporary location. The remainder of this example assumes the latter case.
 
-If we need to physically copy the files to the destination server, we need to be able to identify them. ``RMAN`` can help, especially if you have the backup log::
+If we need to physically copy the files to the destination server, we need to be able to identify them. ``RMAN`` can help, especially if you have the backup log:
+
+..  code-block:: batch
 
     find /i "Piece Handle" <logfile_name> | sort
 
 The output will be something like the following::
 
     ---------- RMAN_TEST_BACKUP.LOG
-    Piece Handle=J:\BACKUPS\CFG\C-2081680004-20161103-01 tag=TAGyadayadayada comment=NONE
-    Piece Handle=J:\BACKUPS\CFG\C-2081680004-20161103-01 tag=TAGyadayadayada comment=NONE
-    Piece Handle=J:\BACKUPS\CFG\2VRJT781_1_1 tag=TAGyadayadayada comment=NONE
-    Piece Handle=J:\BACKUPS\CFG\32RJT7GC_1_1 tag=TAGyadayadayada comment=NONE
-    Piece Handle=J:\BACKUPS\CFG\31RJT7B6_1_1 tag=TAGyadayadayada comment=NONE
-    Piece Handle=J:\BACKUPS\CFG\30RJT794_1_1 tag=TAGyadayadayada comment=NONE
-    Piece Handle=J:\BACKUPS\CFG\2URJT720_1_1 tag=TAGyadayadayada comment=NONE
+    Piece Handle=``J:\BACKUPS\CFG\C-2081680004-20161103-01`` tag=TAGyadayadayada comment=NONE
+    Piece Handle=``J:\BACKUPS\CFG\C-2081680004-20161103-01`` tag=TAGyadayadayada comment=NONE
+    Piece Handle=``J:\BACKUPS\CFG\2VRJT781_1_1`` tag=TAGyadayadayada comment=NONE
+    Piece Handle=``J:\BACKUPS\CFG\32RJT7GC_1_1`` tag=TAGyadayadayada comment=NONE
+    Piece Handle=``J:\BACKUPS\CFG\31RJT7B6_1_1`` tag=TAGyadayadayada comment=NONE
+    Piece Handle=``J:\BACKUPS\CFG\30RJT794_1_1`` tag=TAGyadayadayada comment=NONE
+    Piece Handle=``J:\BACKUPS\CFG\2URJT720_1_1`` tag=TAGyadayadayada comment=NONE
 
 The list of files output by the command are the database dump files that are required on the destination server.
 
-If, on the other hand, the log for the appropriate dump is no longer available, execute the following code in a shell session, on the *source* server::
+If, on the other hand, the log for the appropriate dump is no longer available, execute the following code in a shell session, on the *source* server:
+
+..  code-block:: batch
 
     oraenv <source_database>
     rman target sys/<password> catalog rman11g/<password>@rmancatsrv
 
-Once connected with the target database and the catalogue, execute the following commands::
+Once connected with the target database and the catalogue, execute the following commands:
+
+..  code-block:: sql
 
     spool log to restore_preview.log
     run {
@@ -217,7 +233,9 @@ Once connected with the target database and the catalogue, execute the following
     spool log off;
     exit;
     
-Now the backup piece names can be extracted from the logfile, as follows::
+Now the backup piece names can be extracted from the logfile, as follows:
+
+..  code-block:: batch
 
     Rem Find the backup pieces required:
     find /i "Piece Name:" restore_preview.log | sort
@@ -225,17 +243,19 @@ Now the backup piece names can be extracted from the logfile, as follows::
 The output will resemble this::
 
     ---------- RESTORE_PREVIEW.LOG
-    Piece Name: J:\BACKUPS\CFG\C-2081680004-20161103-01
-    Piece Name: J:\BACKUPS\CFG\C-2081680004-20161103-01
-    Piece Name: J:\BACKUPS\CFG\2VRJT781_1_1
-    Piece Name: J:\BACKUPS\CFG\32RJT7GC_1_1
-    Piece Name: J:\BACKUPS\CFG\31RJT7B6_1_1
-    Piece Name: J:\BACKUPS\CFG\30RJT794_1_1
-    Piece Name: J:\BACKUPS\CFG\2URJT720_1_1
+    Piece Name: ``J:\BACKUPS\CFG\C-2081680004-20161103-01``
+    Piece Name: ``J:\BACKUPS\CFG\C-2081680004-20161103-01``
+    Piece Name: ``J:\BACKUPS\CFG\2VRJT781_1_1``
+    Piece Name: ``J:\BACKUPS\CFG\32RJT7GC_1_1``
+    Piece Name: ``J:\BACKUPS\CFG\31RJT7B6_1_1``
+    Piece Name: ``J:\BACKUPS\CFG\30RJT794_1_1``
+    Piece Name: ``J:\BACKUPS\CFG\2URJT720_1_1``
     
 The first two files have the same name as these will be the spfile and controlfile backups, and in this restore exercise, they are found in the same file.
 
-Now the free standing archived logs can be extracted from the logfile, as follows::
+Now the free standing archived logs can be extracted from the logfile, as follows:
+
+..  code-block:: batch
 
     Rem Find the archived logs required:
     find /i "Name:" restore_preview.log | find /v /i "Piece Name:" | find /v /i "spfile" | sort
@@ -243,13 +263,13 @@ Now the free standing archived logs can be extracted from the logfile, as follow
 The output will resemble the following abridged listing::
 
     ---------- RESTORE_PREVIEW.LOG
-        ...
-        Name: F:\MNT\FAST_RECOVERY_AREA\CFG\ARCHIVELOG\2016_11_04\O1_MF_1_3791_D1RX3HSS_.ARC
-        Name: F:\MNT\FAST_RECOVERY_AREA\CFG\ARCHIVELOG\2016_11_04\O1_MF_1_3792_D1RXZMXZ_.ARC
-        Name: F:\MNT\FAST_RECOVERY_AREA\CFG\ARCHIVELOG\2016_11_04\O1_MF_1_3792_D1RXZMXZ_.ARC
-        Name: F:\MNT\FAST_RECOVERY_AREA\CFG\ARCHIVELOG\2016_11_04\O1_MF_1_3793_D1RYVR2M_.ARC
-        Name: F:\MNT\FAST_RECOVERY_AREA\CFG\ARCHIVELOG\2016_11_04\O1_MF_1_3793_D1RYVR2M_.ARC
-        ...
+    ...
+    Name: ``F:\MNT\FAST_RECOVERY_AREA\CFG\ARCHIVELOG\2016_11_04\O1_MF_1_3791_D1RX3HSS_.ARC``
+    Name: ``F:\MNT\FAST_RECOVERY_AREA\CFG\ARCHIVELOG\2016_11_04\O1_MF_1_3792_D1RXZMXZ_.ARC``
+    Name: ``F:\MNT\FAST_RECOVERY_AREA\CFG\ARCHIVELOG\2016_11_04\O1_MF_1_3792_D1RXZMXZ_.ARC``
+    Name: ``F:\MNT\FAST_RECOVERY_AREA\CFG\ARCHIVELOG\2016_11_04\O1_MF_1_3793_D1RYVR2M_.ARC``
+    Name: ``F:\MNT\FAST_RECOVERY_AREA\CFG\ARCHIVELOG\2016_11_04\O1_MF_1_3793_D1RYVR2M_.ARC``
+    ...
 
 The backup pieces and archived logs listed above are *all* required to restore and recover the database to the requested date and time.
 
@@ -258,6 +278,7 @@ The backup pieces should be copied to the location on the destination server whe
 **Please Note:** Make sure that when you come to run the ``catalog start ...`` command in ``RMAN`` that you are *not* connected to the catalog database or future archived logs backups for the source database will try to backup any archived logs in the destination backup location!
 
 ** Please Also Note:** The end of the logfile above may indicate that your chosen date and time is not recent enough to restore and recover the database to a non-fuzzy (Oracle's choice of words!) state. Check the end of the log file for details as to whether or not you need to adjust your date and time.
+
 
 Initialisation of Destination Server
 ====================================
@@ -274,7 +295,8 @@ The preliminary work on the destination server is identical regardless of the ty
 - Start the instance again, in NOMOUNT mode, using the restored and edited PFILE;
 - Restore the controlfiles;
 - Start the instance yet again, this time in MOUNT mode, so that it picks up the restored controlfiles;
-- Catalog the [copied] dump files.
+- If the dump files were copied to the destination server, or are in a different location to where they were backed up originally, they must be catalogued into the control files. If, on the other hand, they are still in exactly the same location as they were backed up to, the control files already know about them, and they do not need to be catalogued.
+
 
 You can now restore or validate the database itself by carrying out a Point in time Restore, or a Validation restore as described below. First however, the preparation work.
 
@@ -308,13 +330,11 @@ Set the Oracle environment accordingly, to the new SID::
     set nls_date_format=yyyy/mm/dd hh24:mi:ss
     set nls_lang=american_america.we8iso8859p1
     
-Start the instance as follows then login to RMAN without a catalog connection::
+Start the instance from RMAN, as follows, without a catalog connection::
 
-    sqlplus sys/password as sysdba
-    startup nomount pfile='?\database\initazdba01.ora'
-    exit
-    
     rman target sys/password
+    startup nomount pfile='?\database\initazdba01.ora'
+    
 
 It is assumed that the appropriate backup files are (now) available on the destination server, either copied across (as in this example) or via a full UNC path specification. See *Determining Which Backup Files are Required*, above, for details on how to extract the names of the backup pieces etc that require to be copied from the source server.
     
@@ -324,7 +344,7 @@ Restore the SPFILE
 
 Enter the following commands in ``RMAN`` to restore the SPFILE for azdba01 as a text based PFILE. The DBID in use is that recorded earlier when we collected the required data about the ``RMAN`` backup we are restoring.
 
-::
+..  code-block:: sql
 
     set dbid 692009496;
     restore spfile 
@@ -338,13 +358,13 @@ When the restore has finished, open the file in a separate session and edit the 
 - Delete FAL_SERVER and FAL_CLIENT if present;
 - Delete LOCAL_LISTENER if present;
 - Delete LOG_ARCHIVE_CONFIG if present;
-- Delete REMOTE_LISTENER if present;
 - Delete LOG_ARCHIVE_DEST_2 upwards. Keep only dest 1.
 - Delete LOG_ARCHIVE_DEST_STATE_2 upwards. Keep only state 1.
 - Delete LOG_FILE_NAME_CONVERT if present;
+- Set PGA_AGGREGATE_TARGET to 100m;
+- Delete REMOTE_LISTENER if present;
 - Set SGA_TARGET to 2g; (Or adjust as appropriate for the database.)
 - Set SGA_MAX_SIZE to 3g; (Or adjust as appropriate for the database.)
-- Set PGA_AGGREGATE_TARGET to 100m;
 
 Additionally, if the restore is taken from a Data Guarded database, then remove anything to do with the standby:
 
@@ -352,15 +372,15 @@ Additionally, if the restore is taken from a Data Guarded database, then remove 
 
 If the restore is taken from an RAC database, then ensure that all RAC specific parameters are removed:
 
-- Ensure CLUSTER_DATABASE is set to FALSE;
-- Ensure INSTANCE_NAME matches DB_BNAME;
-- Ensure INSTANCE_NUMBER is set to 1;
+- Ensure CLUSTER_DATABASE, if present, is set to FALSE;
+- Ensure INSTANCE_NAME, if present, matches DB_BNAME;
+- Ensure INSTANCE_NUMBER, if present, is set to 0;
 
 Finally, was the dump taken from a *standby*) database? Fix these parameters, and any others you may find, to be those of the desired *primary* database:
 
-- Ensure DB_UNIQUE_NAME matches DB_NAME and is correct for the primary database in question;
 - Ensure that AUDIT_FILE_DEST refers to the primary database, not the standby;
 - Ensure that the CONTROL_FILES refer to the primary database and not the standby;
+- Ensure DB_UNIQUE_NAME, if present, matches DB_NAME and is correct for the primary database in question;
 - Ensure that DISPATCHERS refers to the primary database, not the standby;
 - Ensure that LOG_ARCHIVE_DEST_1 is set to 'LOCATION=USE_RECOVERY_FILE_DEST';
 
@@ -372,7 +392,7 @@ Mount the Instance & Restore the Controlfiles
 
 Still in ``RMAN``, restart the database with the new pfile and restore the control files::
 
-    startup force nomount;
+    startup force nomount pfile='?\database\initazdba01.ora';
     set dbid 692009496;
     restore controlfile from 'e:\backups\azdba01\<file_name>';
     
@@ -384,7 +404,7 @@ Mount The instance
 
 Use the following ``RMAN`` command to mount the instance, ready for the remainder of the restore or validation exercise::
 
-    startup force mount;
+    startup force mount pfile='?\database\initazdba01.ora';
     
 At this point, you should note that the ``DBID`` reported by ``RMAN`` for the database, is now set as per the one we have been using. The database is ready to be restored to a given point in time, or used to validate the backup files.
 
@@ -394,49 +414,62 @@ At this point, you should note that the ``DBID`` reported by ``RMAN`` for the da
 Catalog the Dump Files
 ----------------------
 
+The restored control files 'know' that there were backups taken, for the source database, and where those dumps were written to, *provided* that the dumps were taken recently. 
+
+    *Recently* in this case means that as long as the backups took place within the previous ``CONTROL_FILE_RECORD_KEEP_TIME`` days, then the control files we restored should know about them.
+
+The control files do not keep a never ending list of backups - they are restricted to ``CONTROL_FILE_RECORD_KEEP_TIME`` days only. If the dumps are older they may have aged out of the control files and will need to be re-catalogued. If the dump files are not in exactly the same location that they were backed up to, they will definitely need to be re-catalogued.
+
+You may skip to the next section if the dumps were indeed recent *and* are being restored from the exact location that they were backed up to. The control files already 'know' where they are.
+
+If the files had to be copied over from the source server, or are now located in a different place from where they were backed up to, or if they are not recent enough, then they must be re-catalogued. This *does not* affect the ``RMAN`` catalog, which we are not using, only the control files themselves.
+
 The dump files can be catalogued as follows::
 
     catalog start with 'e:\backups\azdba01' noprompt;
     
 After a while, the copy of the dump files will be recorded in the control file.
 
-The above assumes that the source files have been physically copied to the destination server, into the location given above. If the files are on a UNC path, simply specify it in the command above.
+The above assumes that the source files have been physically copied to the destination server, into the location given above. If the files are on a UNC path, simply specify it in the command::
+
+    catalog start with '\\some_server_name\backups\azdba01' noprompt;    
 
 
 Point In Time Restore
 =====================
 
-Once the SPFILE and Controlfiles have been restored and edited as required, and the dump files from the source server have been [copied over to the destination server, and] catalogued in the control file, a point in time restore will:
+The database is now ready to be restored to a desired point in time. A *point in time* restore will:
 
-- Restore the database files, *possibly* to a different location (path) to that on the source database, and;
-- Recover from various archived logs to bring the database up to a given point in time.
+- Restore the database files, *optionally* to a different path to that on the source database, and;
+- Recover from various archived logs to bring the database up to a given point in time, and;
+- *Optionally* rename the online and standy REDO logs to use a different path to that originally backed up, and;
 - Open the database using the ``resetlogs`` option.
 
 In this exercise, we are restoring to the point in time of the last archived log backed up on the source server, sequence 73. 
 
-**Beware:** As we want sequence 73 to be applied to the restored database as part of the recovery, we must ensure that we use 74 as the ``until sequence`` in the RMAN restore and recover. ``RMAN`` restores, and recovers, *up to, but not including*, the specified sequence!
+    **Beware:** As we want sequence 73 to be applied to the restored database as part of the recovery, we must ensure that we use 74 as the ``until sequence`` in the RMAN restore and recover. ``RMAN`` restores, and recovers, *up to, but not including*, the specified sequence!
 
 
-Server ORCDEVORC01
-------------------
+On the Source Server
+--------------------
 
 Backups files for the appropriate ``RMAN`` backup of the database, and archived logs, need to be found and made available to the destination server. See the section *Determining Which Backup Files are Required*, above, for full details.
 
 You can determine the required backup files by scanning the appropriate backup logfile for the "piece handle" lines, similar to this for the database::
 
-    piece handle=H:\BACKUPS\AZDBA01\04RLI3KG_1_120161122 tag=TAG20161122T114821 comment=NONE
+    piece handle=``H:\BACKUPS\AZDBA01\04RLI3KG_1_120161122`` tag=TAG20161122T114821 comment=NONE
     
 And this for the archived logs:
 
-    piece handle=H:\BACKUPS\AZDBA01\0FRLIA4N_1_120161122 tag=TAG20161122T133930 comment=NONE
+    piece handle=``H:\BACKUPS\AZDBA01\0FRLIA4N_1_120161122`` tag=TAG20161122T133930 comment=NONE
     
 There will, of course be numerous piece handles and all of them will be required to be accessed from, or copied to, the destination server. You will note that the database and archived logs have different tags.
 
     
-Server DEVORC01
----------------
+On the Destination Server
+-------------------------
 
-Because we are running a restore and recover, there is an unfortunate problem, the various ``_FILE_NAME_CONVERT`` parameters *do not work*. We have to do things manually if we are changing the location of the various data files. Execute the following commands in ``RMAN``::
+Because we are running a restore and recover, there is an unfortunate problem, the various ``_FILE_NAME_CONVERT`` parameters *do not work*. We have to do things manually *if we are changing the location of the various data files*\ . Execute the following commands in ``RMAN``::
 
     run {
     	allocate channel d1
@@ -455,6 +488,9 @@ Because we are running a restore and recover, there is an unfortunate problem, t
         device type DISK;
 
         set until sequence 74;  # One more than required!
+        
+        # ONLY if changing the data file paths.
+        # Leave out if restoring to the same path as was dumped from.
         @e:\backups\azdba01\rename_dbfiles.rman
 
         restore database;
@@ -486,8 +522,15 @@ Once all the archived logs have been applied, up to and including the desired se
 Start sqlplus::
 
     sqlplus sys/password as sysdba
+    
+    -- ONLY if changing the data file paths.
+    -- Leave out if restoring to the same path as was dumped from.
     @e:\backups\azdba01\rename_logs.sql
+    
+    -- Always do this. The wrong filename could be in use.
     alter database disable block change tracking;
+
+    -- Do the following always after a SET UNTIL ... restore and recover.
     alter database open resetlogs;
     
 That's it. The database has been restored on a new server. 
@@ -500,9 +543,9 @@ See the section below on tidying up, for details of what might be required next,
 Missing Archived Logs
 =====================
 
-It is possible that some of the archived logs required for the above recovery of the database are not present on disc. They may have been archived off to a backup vault, or whatever. They must be restored to the location visible to the database being recovered.
+It is *occasionally* possible that some of the archived logs required for the above recovery of the database are not present on disc. They may have been archived off to a backup vault, or whatever. They must be restored to the location visible to the database being recovered.
 
-**Warning:** You will be using the catalog here and so, any restores of archived logs will affect the source database as future backups will attempt to backup the archived logs in the location you are about to restore into.
+    **Warning:** You will be using the catalog here and so, any restores of archived logs *will affect the source database* as future backups will attempt to backup the archived logs in the location you are about to restore into.
 
 During the recovery phase, ``RMAN`` complained about the following::
 
@@ -510,7 +553,7 @@ During the recovery phase, ``RMAN`` complained about the following::
 
 As we require up to and including sequence 73, we will probably need to restore sequences 70 through 73. We do this in a *separate ``RMAN`` session* to the one running the recovery.
 
-To restore to the same location that the archived logs were backed up from::
+To restore to the *same location* that the archived logs were backed up from::
 
     run {
         allocate channel d1 device type disk;
@@ -518,7 +561,7 @@ To restore to the same location that the archived logs were backed up from::
         release channel d1;
     }
 
-On the other hand, to restore to a location that is different::
+On the other hand, to restore to a *different location*\ ::
 
     run {
         allocate channel d1 device type disk;
@@ -529,42 +572,42 @@ On the other hand, to restore to a location that is different::
         release channel d1;
     }
 
-If you use the latter, to restore the archived logs directly to the destination server, and you intend to keep the source database, then you must run the following commands on the *source server*::
+If you use the latter, to restore the archived logs directly to the *destination* server, and you intend to keep the *source* database, then you *must* run the following commands on the *source server* against the *source database*\ ::
 
     rman target sys/password catalog rman11g/<password>@rmancatsrv
     crosscheck archivelog all;
     exit
     
-It is not advisable to run a ``delete obsolete`` command afterwards as that may get rid of more than just the obsloete archived logs on the non-existent ``e:\backups\\azdba01`` location!
+**Do not** run a ``delete obsolete`` command afterwards as that will get rid of more than just the obsloete archived logs on the non-existent ``e:\backups\\azdba01`` location! In addition, because the database backups are kept for 7 years - for legal reasons - any that have been archived off of the online backup discs will appear as obsolete. So, you might just have deleted them from the catalog. Luckily, they can be copied back from the vault and re-catalogued if required, but it's best to avoid the problem in the first place.
     
     
 Validation Restore
 ==================
 
-Once the SPFILE and Controlfiles have been restored and edited as required, and the dump files from the source server have been [copied and] catalogued in the control file, a validation only  restore will:
+Once the SPFILE and Controlfiles have been restored and as above, we carry out a validation restore by performing the following steps:
 
-- MOUNT the instance. The instance should actually be MOUNTed after the restoration of the controlfiles;
+- MOUNT the instance. The instance will already be MOUNTed after the restoration of the controlfiles;
 - Execute a ``RESTORE VALIDATE`` command in ``RMAN``.
 
 
-Server ORCDEVORC01
-------------------
+On the Source Server
+--------------------
 
 Backups files for the appropriate ``RMAN`` backup of the database, and archived logs, need to be found and made available to the destination server. See the section *Determining Which Backup Files are Required*, above, for full details.
 
 You can determine the required backup files by scanning the backup logfile for the "piece handle" lines, similar to this for the database::
 
-    piece handle=H:\BACKUPS\AZDBA01\04RLI3KG_1_120161122 tag=TAG20161122T114821 comment=NONE
+    piece handle=``H:\BACKUPS\AZDBA01\04RLI3KG_1_120161122`` tag=TAG20161122T114821 comment=NONE
     
 And this for the archived logs:
 
-    piece handle=H:\BACKUPS\AZDBA01\0FRLIA4N_1_120161122 tag=TAG20161122T133930 comment=NONE
+    piece handle=``H:\BACKUPS\AZDBA01\0FRLIA4N_1_120161122`` tag=TAG20161122T133930 comment=NONE
     
 There will, of course be numerous piece handles and all of them will be required to be accessed from, or copied to, the destination server. You will note that the database and archived logs have different tags.
 
 
-Server DEVORC01
----------------
+On the Destination Server
+-------------------------
 
 Execute the following commands in ``RMAN``::
 
@@ -594,7 +637,9 @@ Execute the following commands in ``RMAN``::
         release channel d1;
     }
 
-That's it. The most recent incremental level 0 database backup has been validated on a new server. You are warned, again, that any level 1 backups taken since that one have not been applied nor validated. This is a risk. Equally, none of the required archived logs have been validated either.
+That's it. The most recent incremental level 0 database backup has been validated on a new server. 
+
+    **You are warned**\ , again, that any level 1 backups taken since the newly validated level zero, have *not* been applied nor validated. This is a risk as it means that the level 1 backup files have not been validated. Equally, none of the required archived logs have been validated either.
 
 See the section below on tidying up, for details of what might be required next.
 
@@ -605,11 +650,13 @@ Tidying Up
 Keeping the Database
 --------------------
 
-If this was a required restore onto a new server, perhaps to migrate a database, and the new database is to be retained for future use, then the following tasks remain to be carried out in ``SQL*Plus``::
+If this was a required restore onto a new server, perhaps to migrate a database, and the new database is to be retained for future use, then the following tasks remain to be carried out in ``SQL*Plus``:
+
+..  code-block:: sql
 
     -- Reapply block change tracking.
     alter database enable block change tracking
-    using file 'e:\mnt\fast_recovery_area\azdba01\bct.dbf';
+    using file 'e:\mnt\fast_recovery_area\azdba01\bct.dbf' reuse;
     
     -- Make sure we run with an spfile.
     create spfile=`%ORACLE_HOME%\database\spfileAZDBA01.ora`
@@ -646,10 +693,12 @@ Backup Test Only
 
 If, on the other hand, this restore was simply an exercise in testing the backups, then it's time to tidy up. Some of the following will not be required for a validation only restore. Errors can be ignored.
 
-- First, drop the database::
+- First, drop the database:
+
+..  code-block:: sql
 
     startup force restrict mount;
-    select instance_name from v$instance; -- Just to be sure!
+    select name, db_unique_name, instance_name from v$database, v$instance; -- Just to be sure!
     drop database;
     exit
     
@@ -667,5 +716,5 @@ The temporary service we created with ``oradim`` should have been deleted when w
     oradim -delete -sid azdba01 
 
 
-You may wish to remove the files from the backup area, ``e:\backups\azdba01`` in this exercise, if they are no longer required. You will obviously *not* be deleting these files if they were accessed via a full UNC pathname from the source server!
+If, and only if, you physically copied the backup files from the source server to the destination server, you may now wish to remove said files from the backup area, ``e:\backups\azdba01`` in this exercise, as they are no longer required. 
 
