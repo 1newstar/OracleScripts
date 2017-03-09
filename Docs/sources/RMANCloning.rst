@@ -592,15 +592,37 @@ Check that all FCS jobs running under dba\_scheduler\_jobs are disabled:
     where enabled = 'TRUE'
     and owner not in ('SYS','SYSTEM','SYSMAN','ORACLE_OCM','EXFSYS')
     order by owner,job_name;
+    
+The results will be similar, not necessarily identical, to the following:
+
+..  code-block::
+
+    OWNER                          ENABL JOB_NAME
+    ------------------------------ ----- ----------------------
+    FCS                            TRUE  ALERTS_HEARTBEAT
+    FCS                            TRUE  CLEARLOGS
+    FCS                            TRUE  JISA_18BDAY_CONVERSION
+    PERFSTAT                       TRUE  PURGE_DAILY
+    PERFSTAT                       TRUE  SNAPSHOT_EVERY_15MINS
 
 For all non-production databases, there should be no jobs owned by FCS in
 the listing. If there are, they must be disabled:
 
 ..  code-block:: sql
 
-    dbms_scheduler.disable(name => 'whatever');
+    begin
+        dbms_scheduler.disable(name => 'FCS.ALERTS_HEARTBEAT');
+        dbms_scheduler.disable(name => 'FCS.CLEARLOGS');
+        dbms_scheduler.disable(name => 'FCS.JISA_18BDAY_CONVERSION');
+    end;
     
-Where ``whatever`` is the enabled job name that you wish to disable.    
+Where ``whatever`` is the enabled job name that you wish to disable.
+
+Check also that there are no PERFSTAT jobs active. If there are, the solution is a little more drastic:
+
+..  code-block:: sql
+
+    drop user perfstat cascade;
 
 
 Clone Configuration

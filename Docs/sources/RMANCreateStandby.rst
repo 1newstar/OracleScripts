@@ -529,7 +529,7 @@ Start the standby instance:
 
     oraenv cfgsb
 
-    sqlplus / as sysdba
+    sqlplus sys/password as sysdba
 
 ..  code-block:: sql
 
@@ -830,18 +830,56 @@ Post Clone Checks
 
     oraenv cfgsb
 
-    sqlplus / as sysdba
+    sqlplus sys/password as sysdba
 
 ..  code-block:: sql
 
-    show parameter instance_name
     show parameter service_names
+
+The output from the above may show a service name that relates back to 
+the source database. This will be especially true if the database was 
+cloned from a database which is a member of a primary-standby setup. In
+this case there is always a separate service name in addition to the one
+that matches the database name. For example:
+
+..  code-block::
+
+    show parameter service_names
+    
+    NAME            TYPE    VALUE
+    --------------- ------- ---------------
+    service_names   STRING  PPDCFG, CFGSRV
+    
+In the above example, the database is named PPDCFG but it has a service in addition - 
+CFGSRV as it was created from a primary database. To resolve this we have to stop and delete 
+the service CFGSRV from this database *and* remove a SYS owned trigger which *should* have
+the name of ``<service_name>_trigger``.
+
+..  code-block:: sql
+
+    begin
+        dbms_service.stop_service(service_name=>'CFGSRV');
+    end;
+    /
+
+    begin
+       dbms_service.delete_service(service_name=>'CFGSRV');
+    end;
+    /
+    
+    drop trigger sys.cfgsrv_trigger;
+
+The rest of the parameters that need checking post clone, are detailed next:
+    
+..  code-block:: sql
+
+    show parameter instance_name
     show parameter audit_file_dest
     show parameter dispatchers
     show parameter db_recovery_file_dest
 
 The output from the above should show the standby database name as
-appropriate, and not the primary. If not, run the appropriate
+appropriate, and *not* the primary. If not, run the appropriate
 command(s) below and bounce the database:
 
 ..  code-block:: sql
@@ -863,8 +901,8 @@ command(s) below and bounce the database:
 
     startup force mount;
 
-    show parameter instance_name
     show parameter service_names
+    show parameter instance_name
     show parameter audit_file_dest
     show parameter dispatchers
     show parameter db_recovery_file_dest
@@ -1370,7 +1408,7 @@ registered.
 
 ..  code-block::
 
-    rman target sys/password@cfg catalog rman11g/password@CFGRMNSVC
+    rman target sys/password@cfg catalog rman11g/password@rmancatsrv
 
 If you run the following command, the current configuration will be
 displayed:
@@ -1905,7 +1943,7 @@ correct things:
 
 ..  code-block:: sql
 
-    sqlplus / as sysdba
+    sqlplus sys/password as sysdba
 
     startup nomount (if the database didn't start)
 
