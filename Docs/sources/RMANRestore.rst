@@ -650,6 +650,44 @@ Tidying Up
 Keeping the Database
 --------------------
 
+For PreProduction or Similar
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If the database just restored is to be kept, perhaps as a pre-production database, then you must ensure that all depersonalisation scripts are executed after the database has been restored. 
+
+In addition, the database *must* be renamed using the ``nid`` utility as it currently has the same ``DBID`` as the database it was restored from and if you attempt to back it up, you may corrupt the backup details for the source database, in the catalogue.
+
+..  code-block::
+
+    sqlplus sys/password as sysdba
+    shutdown immediate
+    startup mount
+    
+If you have a large number of data files, then:
+
+..  code-block::
+
+    alter system set open_cursors=1500 scope=memory;
+    
+Then exit from the database.
+
+In a DOS (shell) session:
+
+..  code-block::
+
+    nid target=sys/password dbname="new name" setname=y logfile=nid.log
+    
+The database will be left closed when the above command completes.
+
+You will need to ensure that spfiles, password files are valid.
+
+You will need to register the database in ``RMAN`` if it is to be backed up.
+
+    
+
+For Migration Purposes
+~~~~~~~~~~~~~~~~~~~~~~
+
 If this was a required restore onto a new server, perhaps to migrate a database, and the new database is to be retained for future use, then the following tasks remain to be carried out in ``SQL*Plus``:
 
 ..  code-block:: sql
@@ -681,7 +719,9 @@ If this was a required restore onto a new server, perhaps to migrate a database,
     select flashback_on from v$database;
     alter database flashback on; -- If 'NO' from the above.
     
-The source database may now be shutdown. It is assumed to be no longer required.
+The source and restored database have the same ``DBID`` and this means that the backups of the source database may be used to restore the new database. 
+
+The source database can now be shutdown if the newly restored database is to be used in its place.
 
 The ``tnsnames.ora`` file(s) spread throughout the estate may now require updating to point the azdba01 alias at the new host.
 
