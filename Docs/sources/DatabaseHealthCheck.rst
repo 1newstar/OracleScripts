@@ -14,12 +14,12 @@ Security
 
 - Passwords - appear mostly insecure, are hard coded into the application and are, therefore, unable to be changed without a deployment. Examples:
 
-    - SVC_AURA_SERV/password1
-    - UVSCHEDULER/abc123
-    - ONLOAD/onload123
-    - BBAPUSER/bb4pus3r
+    - SVC_AURA_SERV
+    - UVSCHEDULER
+    - ONLOAD
+    - BBAPUSER
     
-  Additionally, password1 is known to be rife throughout the database.   
+  Additionally, ****** is known to be rife throughout the database.   
 
 - Only accounts with APP_USER or DBA profiles have any form of password complexity requirements. Other accounts can have any password they desire, however weak or simple. This does cover the majority of accounts however.
 
