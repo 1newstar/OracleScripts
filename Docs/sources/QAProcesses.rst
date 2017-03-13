@@ -13,7 +13,7 @@ Rules
 
 The following is a non-exclusive list of requirements that we expect to see in any code release being applied to production.
 
-- All changes should be accompanied by Release Notes.
+- All changes should be accompanied by valid Release Notes.
 
 - All code will be QA'd by the production DBAs before being considered for execution. Any code that has not been QA'd by the production DBAs will not be considered for execution.
 

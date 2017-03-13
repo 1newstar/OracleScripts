@@ -1046,20 +1046,21 @@ databases to find any gaps. To check on the Primary:
 
 ..  code-block:: sql
 
-    select Dest_name, destination, archived_seq#, applied_seq#,
+    select dest_id, Dest_name, destination, archived_seq#, applied_seq#,
     error, db_unique_name, gap_status
     from   v$archive_dest_status
     where  status <> 'INACTIVE'
-    and    dest_name = 'LOG_ARCHIVE_DEST_2';
+    and    dest_id in (2,3);
 
 Where 'n' is the ``dest_id``, usually 2, of the database parameter
-that ships logs to the standby database.
+that ships logs to the standby database, or 3 for the DR database in production.
 
 ..  code-block::
 
-    DEST_NAME          ARCHIVED_SEQ# APPLIED_SEQ# ERROR GAP_STATUS
-    ------------------ ------------- ------------ ----- ----------
-    LOG_ARCHIVE_DEST_2         15975         15974      NO GAP
+    DEST_ID DEST_NAME          DESTINATION ARCHIVED_SEQ# APPLIED_SEQ# ERROR DB_UNIQUE_NAME GAP_STATUS
+    ------- ------------------ ----------- ------------- ------------ ----- -------------- ----------
+          2 LOG_ARCHIVE_DEST_2 cfgsb               15975         15974      cfgsb          NO GAP
+          3 LOG_ARCHIVE_DEST_2 CFGDR               15975         15974      CFGDR          NO GAP
 
 "NO GAP" is what you are hoping to see.
 
