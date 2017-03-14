@@ -2,7 +2,10 @@
 DBA Daily Checks
 ================
 
-The following is a list of the daily checks that must be carried out in Azure environments. This is required until such time as we get full access to OEM (Oracle Enterprise Manager) and can set up proper monitoring.
+Introduction
+------------
+
+The following is a *non-exclusive* list of the daily checks that must be carried out in Azure environments. This is required until such time as we get full access to OEM (Oracle Enterprise Manager) and can set up proper monitoring.
 
 Database Backups
 ----------------
@@ -208,3 +211,161 @@ Various checks that can be applied when the status is not as desired are:
 - Has the primary database been run in NOACHIVELOG for a while? If so, the standby databases must be recreated.
 
 
+Tablespace Usage
+----------------
+
+Any tablespace which has used 80% or more of its allocated *maximum size* - for ``AUTOEXTEND`` tablespaces and data files - should be considered for investigation and extension. This will need to be done under a service or change request when it involves CFG production (and pre-production?).
+
+Using Toad
+~~~~~~~~~~
+
+- Connect to database as your DBA_XXX username; (As SYSDBA).
+- Database -> Administer -> Tablespaces.
+- Click the refresh button, if the screen has been viewed previously in this session.
+- Click the header for ``USED PCT OF MAX`` *twice* to sort by descending usage.
+
+Now, investigate and resolve any tablespaces that show 80% or more in the ``USED PCT OF MAX`` column. 
+
+
+Using SQL*Plus
+~~~~~~~~~~~~~~
+
+The following query, massive as it is, will determine the correct usage figures for all tablespaces, including temporary ones.
+
+..  code-block:: sql
+
+    -- Work out tablespace sizes, usages and free space.
+    -- Works on 9i and above.
+    -- 
+    -- Tablespaces at the top of the list need attention most.
+    -- Anything over 80% is a warning, 90% is getting critical.
+    --
+    -- Norman Dunbar.
+    with
+    space_size as (
+        select  tablespace_name,
+                count(*) as files, 
+                sum(bytes) as bytes,
+                sum(
+                    case autoextensible
+                    when 'YES' then maxbytes
+                    else bytes 
+                    end
+                ) as maxbytes
+        from    dba_data_files
+        group   by tablespace_name
+    ),
+    --
+    free_space as (
+        select  tablespace_name, sum(bytes) as bytes
+        from    dba_free_space
+        group   by tablespace_name
+    )
+    --
+    select  s.tablespace_name, 
+            s.files as data_files,
+            round(s.bytes/1024/1024, 2) as size_mb,
+            round(nvl(f.bytes, 0) /1024/1024, 2) as free_mb,
+            round((nvl(f.bytes, 0) * 100 / s.bytes), 2) as free_pct,
+            round((s.bytes - nvl(f.bytes, 0))/1024/1024, 2) as used_mb,
+            round((100 - (nvl(f.bytes, 0) * 100 / s.bytes)), 2) as used_pct,        
+            round(s.maxbytes/1024/1024, 2) as max_mb,
+            round((nvl(s.bytes, 0) * 100 / s.maxbytes), 2) as size_pct_max,
+            round((nvl(f.bytes, 0) * 100 / s.maxbytes), 2) as free_pct_max,
+            round((s.bytes - nvl(f.bytes, 0)) * 100 / s.maxbytes, 2) as used_pct_max        
+    from    space_size s
+    left join free_space f
+    on      (f.tablespace_name = s.tablespace_name)
+    --
+    union all
+    --
+    -- Get actual TEMP usage as opposed to DBA_FREE_SPACE figures.
+    select  h.tablespace_name,
+            count(*) data_files,
+            --
+            round(sum(h.bytes_free + h.bytes_used) / 1048576, 2) as size_mb,
+            --
+            round(sum((h.bytes_free + h.bytes_used) - nvl(p.bytes_used, 0)) / 
+            1048576, 2) as free_mb,
+            --
+            round((sum((h.bytes_free + h.bytes_used) - nvl(p.bytes_used, 0)) / 
+            sum(h.bytes_used + h.bytes_free)) * 100, 2) as  Free_pct,
+            --
+            round(sum(nvl(p.bytes_used, 0))/ 1048576, 2) as used_mb,
+            100 - round((sum((h.bytes_free + h.bytes_used) - 
+            nvl(p.bytes_used, 0)) / 
+            sum(h.bytes_used + h.bytes_free)) * 100, 2) as  used_pct,
+            --
+            round(sum(decode(f.autoextensible, 
+                             'YES', f.maxbytes, 
+                             'NO', f.bytes) / 
+            1048576), 2) as max_mb,
+            --
+            round(sum(h.bytes_free + h.bytes_used) * 100 / 
+            sum(decode(f.autoextensible, 
+                       'YES', f.maxbytes, 
+                       'NO', f.bytes)), 2) as  size_pct_max,
+            --
+            round(sum((h.bytes_free + h.bytes_used) - 
+            nvl(p.bytes_used, 0)) * 100 / 
+            sum(decode(f.autoextensible, 
+                       'YES', f.maxbytes, 
+                       'NO', f.bytes)), 2) as  free_pct_max,
+            --
+            round(sum(nvl(p.bytes_used, 0)) * 100 / 
+            sum(decode(f.autoextensible, 
+                       'YES', f.maxbytes, 
+                       'NO', f.bytes)), 2) as  used_pct_max
+            --
+    from    sys.v_$TEMP_SPACE_HEADER h,
+            sys.v_$Temp_extent_pool p,
+            dba_temp_files f 
+    where   p.file_id(+) = h.file_id
+    and     p.tablespace_name(+) = h.tablespace_name
+    and     f.file_id = h.file_id
+    and     f.tablespace_name = h.tablespace_name
+    group   by h.tablespace_name
+    --
+    order   by used_pct_max desc;
+               
+The output is sorted in descending order of the tablespaces with the most used space, as a percentage of their maximum. (The final column in the listing.) The topmost tablespaces should be investigated if the figures are 80% or higher.
+
+You should note, that where there is a data file in in ``AUTOEXEND`` mode, that the maximum size of *unlimited* actually correlates to 30Gb.
+
+Password Expiry
+---------------
+
+Where password changes are forced, using profiles for example, it is advisable to know which users accounts will expire within the next fortnight. The following query will list those affected users. 
+
+Note, only users who have a profile that limits password life times will be selected.
+
+..  code-block:: sql
+
+    -- List all users with a profile which limits password life times
+    -- and who are going to have to change their password in the next 
+    -- fortnight.
+    --
+    -- Norman Dunbar.
+    --
+    with password_life_time as (
+        select profile, limit
+        from dba_profiles
+        where resource_name = 'PASSWORD_LIFE_TIME'
+        and limit <> 'UNLIMITED' 
+        and limit <> 'DEFAULT'   
+    ),
+    --
+    user_stuff as (
+        select username, expiry_date, profile as profile_name, trunc(expiry_date) - trunc(sysdate) as days_remaining
+        from dba_users
+        where account_status = 'OPEN'
+    )
+    --
+    select username, expiry_date, days_remaining, profile, limit
+    from password_life_time, user_stuff
+    where profile = profile_name
+    and days_remaining <= 14
+    order by days_remaining, username;
+
+
+ 
