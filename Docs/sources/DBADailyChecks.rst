@@ -367,5 +367,18 @@ Note, only users who have a profile that limits password life times will be sele
     and days_remaining <= 14
     order by days_remaining, username;
 
+Restore Points
+--------------
 
+Restore points are useful when performing upgrades and releases etc, but leaving them lying around causes the FRA to fill up as flashback logs and archived redo logs remain, online, ready to be used to flashback the database. The following script will identify any restore points that have been in place for 7 or more days.
+
+..  code-block::
+
+    select  name, storage_size/1024/1024/1024 as size_gb,
+            time as creation_timestamp, 
+            restore_point_time as restore_to_time
+    from    v$restore_point
+    where   trunc(systimestamp) - trunc(time) >= 7
+    order   by time;
  
+When a restore point is identified, it should be deleted *after* checking with the team/person/manager/business user who requested it be created. 
