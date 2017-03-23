@@ -645,14 +645,14 @@ at location:
 
 $/TA/MAIN/Non Source/Dev DBA/Database Release/control\_script/Create\_UV\_Users/Main
 
-The controlling script is named execute.sql and this *must* be edited
+The controlling script is named ``_execute.sql`` and this *must* be edited
 prior to *running as the FCS user*. Only one line needs to be changed:
 
 ..  code-block:: sql
 
-    PK_ACCESS_SETUP.UPDATE_ACCESS('???');
+    conf := '???';
 
-Replace '???' in the above with one of the other values listed in the file
+Replace '???' in the above with one of the values listed in the file
 itself. The value depends on the "type" of the database. Currently, valid values are:
 
 +----+---------------------------+
@@ -672,7 +672,7 @@ Save the file, and run the code:
 ..  code-block:: sql
 
     sqlplus fcs/password 
-    @execute.sql
+    @_execute.sql
 
 If you mistakenly run the code as SYS, then the fix is to carry out the 
 following while logged in as SYS:

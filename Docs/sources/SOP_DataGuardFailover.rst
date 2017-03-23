@@ -69,7 +69,7 @@ Perform Switchover
 Post Switchover Tasks
 ---------------------
 
-See Post Switchover Checks below.
+First, amend the RMAN setting for ARCHIVELOG DELETION POLICY as described in section *Check RMAN Archivelog Deletion Policy* below, then skip to section *Post Switchover Checks* and ensure all checks are carried out.
 
 
 Explicit Version
@@ -156,30 +156,20 @@ Check RMAN Archivelog Deletion Policy
 
 Both databases have the same DBID, so if RMAN is in use for daily
 backups, then the archivelog deletion policy should be set to "APPLIED
-ON ALL STANDBY":
+ON ALL STANDBY BACKED UP 2 TIMES TO DISK" on the primary database:
 
 ..  code-block::
 
     rman target sys/password@CFG
     
-    RMAN> show archivelog deletion policy;
+    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
 
-    RMAN configuration parameters for database with db_unique_name CFG
-    are:
-
-    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
-
-and for the standby:
+and for the standby, it should be set to "APPLIED ON ALL STANDBY":
 
 ..  code-block::
 
     rman target sys/password@CFGSB
     
-    RMAN> show archivelog deletion policy;
-
-    RMAN configuration parameters for database with db_unique_name CFGSB
-    are:
-
     CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
 
     

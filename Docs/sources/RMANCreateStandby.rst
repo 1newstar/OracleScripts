@@ -1394,10 +1394,14 @@ and connections will fail in the normal manner.
 Update RMAN Configuration for Primary & Standby Databases
 =========================================================
 
-The primary and standby databases should have their ``archivelog deletion
-policy`` updated to *applied on all standby backed up 2 times to device
-type disk*. This will apply regardless of which instance is running as
-the primary as both databases have the same DBID.
+The primary database should now have its ``archivelog deletion
+policy`` updated to *applied on all standby backed up 2 times to disk*. 
+
+The standby database(s) should now have its ``archivelog deletion
+policy`` updated to *applied on all standby*. 
+
+You must remember to change these around whenever you carry out a 
+switchover. See the SOP for this for details.
 
 Non primary-standby pairs only have their archived logs deleted after
 two successful backups. With a primary-standby pair, it is necessary to

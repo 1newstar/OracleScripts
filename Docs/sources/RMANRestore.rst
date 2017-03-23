@@ -140,46 +140,129 @@ You need the appropriate file for both the controlfiles and the spfile backups.
 Scripts to Rename Data and Redo Files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
 
-If the database is being *physically* restored to a set of paths on the destination server, that are identical to those on the source server, then skip this section.
-  
-The restore and recover will normally attempt to write the data files back to the same path location as per the source database. If we are intending to restore to different paths, we need an ``RMAN`` script to be generated to rename the data files prior to the restore of the database on the new server. 
+If the database is merely being *validated*, skip this section.
 
-This is required because the parameters ``DB_FILE_NAME_CONVERT`` and ``LOG_FILE_NAME_CONVERT`` *do not work* in an ``RMAN`` restore operation.  
+If the database is being *physically* restored to a set of paths on the destination server, that are *identical* to those on the source server, then skip this section.
+  
+The restore and recover will normally attempt to write the data files back to the same location as the source database. If we are intending to restore to different paths, we need an ``RMAN`` script to be generated to rename the data files prior to the restore of the database on the new server. There are two ways (at least) to do this, a hard way and an easy way if we are using Oracle 11gR2 onwards. Both are described below, pick one.
+
+This is required because the database parameters ``DB_FILE_NAME_CONVERT`` and ``LOG_FILE_NAME_CONVERT`` *do not work* in an ``RMAN`` restore operation.
 
 We also require a ``SQL*Plus`` script to rename the online redo logs.
 
-A validation restore doesn't require these scripts and nor does a physical restore to the same locations, even if they are on a different server.
+The Hard Way
+""""""""""""
 
-Run the following script, against the source database, as the SYSDBA user, to generate the two separate scripts to carry out the renaming exercise:
+Run the following query, against the source database, as the SYSDBA user, to generate the scripts to carry out the data file renaming, *the hard way*, the easy way follows below:
 
 ..  code-block:: sql
 
     set lines 2000 trimspool on
     set pages 3000 head off feed off
     set echo off verify off
+    
     spool rename_dbfiles.rman
 
     -- Script to rename data files using RMAN...
+    -- MAKE SURE that you change the DEFINE to 
+    -- suit your new database locations.
+    define DEST_PATH=e:\mnt\oradata\AZDBA01\
+    
+    -- The following will use the define above.
     select 'set newname for datafile '|| file# || 
-    ' to ''e:\mnt\oradata\azdba01\' || 
+    ' to ''&DEST_PATH' || 
     substr(name, instr(name, '\', -1) +1) || ''';' 
-    from v$datafile;
+    from v$datafile
+    --
+    union all
+    --
+    select 'set newname for tempfile '|| file# || 
+    ' to ''&DEST_PATH' || 
+    substr(name, instr(name, '\', -1) +1) || ''';' 
+    from v$tempfile;
 
     spool off
+
+    -- Clean up, to avoid surprises later!
+    undefine DEST_PATH
+
+
+The Easy Way
+""""""""""""
+
+The *easy way* is to get RMAN to do all that for you. If, and only if, *all* the data files are located in the same folder, then adding the following line to the RMAN command to restore the database, will rename the data files correctly. **Beware** that it will not rename the temp files though, contrary to what the manual states.
+
+..  code_block:: none
+
+    set newname for database to '?:\mnt\oradata\%d\%b';
+    
+In the code above, the '?' should be replaced by the drive letter where the data files are desired to be located on the destination server.
+
+
+Renaming Redo Logs
+""""""""""""""""""
+
+The following snippet will tell you the replacements that might be needed for the log file renaming:
+
+..  code-block:: sql
+
+    select distinct substr(member, 1, 1) 
+    from   v$logfile;    
+    
+The result(s) can be used as the 'from' defines below - ``LOG_A_DRIVE`` and ``LOG_B_DRIVE``.
+
+The redo logs are assumed to be found on two separate drives - the ORADATA for the 'a' variants of the logs, and the FRA for the 'b' variants. If these are to remain unchanged as drive letters after the rename, then simply set the appropriate drive letters accordingly below.
+
+Likewise, the database name in the path might be desired to be changed, in which case set those defines accordingly too, otherwise, set them to be the same, or something t hat cannot occur.
+
+..  code-block:: sql
 
     spool rename_logs.sql
     
     -- Script to rename REDO logs using SQL*Plus...
     -- Note: REPLACE() is case sensitive. Use correct locations!
+    --       AND use UPPERCASE for drive letters and DB Names!
+    --
+    -- Change the following to suit your source and destination drives.
+    -- LOG_A_DRIVE is the drive where REDOnA logs live. Usually ORADATA drive.
+    define LOG_A_DRIVE=E
+
+    -- LOG_B_DRIVE is the drive where REDOnB logs live. Usually FRA drive.
+    define LOG_B_DRIVE=F
+
+    -- LOG_A_DEST is where the REDOnA logs will be after the restore. ORADATA again.?
+    define LOG_A_DEST=G
+
+    -- LOG_B_DEST is where the REDOnB logs will be after the restore. FRA again?
+    define LOG_B_DEST=H
+
+    -- SRC_DB is part of the path to ORADATA for the source database.
+    define SRC_DB=AZDBA01
+    
+    -- DEST_DB is part of the path to ORADATA for the destination database.
+    -- Can be the same as above.
+    define DEST_DB=AZDBA01  
+    
     select 'alter database rename file '''|| member || ''' to ''' ||
-    replace(replace(upper(member), 'F:','E:'),'G:','E:') || ''';'
+            replace(
+                replace(
+                    replace(upper(member),
+                           '&LOG_A_DRIVE:','&LOG_A_DEST:'),
+                    '&LOG_B_DRIVE:','&LOG_B_DEST:'), 
+                '&SRC_DB', '&DEST_DB'
+            ) || ''';'
     from v$logfile
     order by 1;
     
     spool off
-
-**Note:** In the script above, the current location(s) of the various data files are all "don't care" while the redo logs are currently found on both the ``F:\`` and ``G:\`` drives. The scripts generated by the above, assume everything will eventually be located on the ``E:\`` drive only.  You will need to amend the above if a different source or destination location is desired.
-
+    
+    -- Clean up, to avoid surprises later!
+    undefine LOG_A_DRIVE
+    undefine LOG_B_DRIVE
+    undefine LOG_A_DEST
+    undefine LOG_B_DEST
+    undefine SRC_DB
+    undefine DEST_DB  
 
 The two scripts generated, ``rename_dbfiles.rman`` and ``rename_logs.sql`` will need copying to a suitable location on the destination server. 
 
@@ -188,6 +271,8 @@ The two scripts generated, ``rename_dbfiles.rman`` and ``rename_logs.sql`` will 
 
 Determining Which Backup Files are Required
 ===========================================
+
+If the backup location can be seen from both servers, then skip this section.
 
 Once we have an idea of the date and time of the end of the backup we wish to restore/test, we need to ensure that the files are available on the destination server. This can be done by using the full UNC path to the backup location on the source server - provided it can be seen from the destination server.
 
@@ -348,13 +433,15 @@ Enter the following commands in ``RMAN`` to restore the SPFILE for azdba01 as a 
 
     set dbid 692009496;
     restore spfile 
-    to pfile 'c:\oracledatabase\product\11.2.0\dbhome_1\database\initAZDBA01.ora' 
+    to pfile '?\database\initAZDBA01.ora' 
     from 'e:\backups\azdba01\<file_name>';
     
 When the restore has finished, open the file in a separate session and edit the following, *non-exclusive* list of parameters:
 
 - Anything that *does not* begin with an asterisk ('*') should be deleted;
 - Delete DB_FILE_NAME_CONVERT if present;
+- Make sure that the DB_RECOVERY_FILE_DEST setting is correct for this new database.
+- Make sure that the CONTROL_FILES setting is correct for this new database. There should be one in ``ORADATA`` and one in the FRA.
 - Delete FAL_SERVER and FAL_CLIENT if present;
 - Delete LOCAL_LISTENER if present;
 - Delete LOG_ARCHIVE_CONFIG if present;
@@ -376,7 +463,7 @@ If the restore is taken from an RAC database, then ensure that all RAC specific 
 - Ensure INSTANCE_NAME, if present, matches DB_BNAME;
 - Ensure INSTANCE_NUMBER, if present, is set to 0;
 
-Finally, was the dump taken from a *standby*) database? Fix these parameters, and any others you may find, to be those of the desired *primary* database:
+Finally, was the dump taken from a *standby* database? Fix these parameters, and any others you may find, to be those of the desired *primary* database:
 
 - Ensure that AUDIT_FILE_DEST refers to the primary database, not the standby;
 - Ensure that the CONTROL_FILES refer to the primary database and not the standby;
@@ -414,9 +501,9 @@ At this point, you should note that the ``DBID`` reported by ``RMAN`` for the da
 Catalog the Dump Files
 ----------------------
 
-The restored control files 'know' that there were backups taken, for the source database, and where those dumps were written to, *provided* that the dumps were taken recently. 
+*This step can be omitted if the location of the backup files is exactly where RMAN put them. The restored controlfiles will/should still contain details of the backup locations and those will be used, provided the backups were taken 'recently'.*
 
-    *Recently* in this case means that as long as the backups took place within the previous ``CONTROL_FILE_RECORD_KEEP_TIME`` days, then the control files we restored should know about them.
+    *Recently* in this case means that as long as the backups took place within the previous ``CONTROL_FILE_RECORD_KEEP_TIME`` days, then the control files we restored *should* still know about them.
 
 The control files do not keep a never ending list of backups - they are restricted to ``CONTROL_FILE_RECORD_KEEP_TIME`` days only. If the dumps are older they may have aged out of the control files and will need to be re-catalogued. If the dump files are not in exactly the same location that they were backed up to, they will definitely need to be re-catalogued.
 
@@ -437,6 +524,8 @@ The above assumes that the source files have been physically copied to the desti
 
 Point In Time Restore
 =====================
+
+If the exercise being carried out is a validation restore only and not a physical restore, then skip to the section *Validation Restore* below. 
 
 The database is now ready to be restored to a desired point in time. A *point in time* restore will:
 
@@ -459,7 +548,7 @@ You can determine the required backup files by scanning the appropriate backup l
 
     piece handle=``H:\BACKUPS\AZDBA01\04RLI3KG_1_120161122`` tag=TAG20161122T114821 comment=NONE
     
-And this for the archived logs:
+And this for the archived logs::
 
     piece handle=``H:\BACKUPS\AZDBA01\0FRLIA4N_1_120161122`` tag=TAG20161122T133930 comment=NONE
     
@@ -469,7 +558,15 @@ There will, of course be numerous piece handles and all of them will be required
 On the Destination Server
 -------------------------
 
-Because we are running a restore and recover, there is an unfortunate problem, the various ``_FILE_NAME_CONVERT`` parameters *do not work*. We have to do things manually *if we are changing the location of the various data files*\ . Execute the following commands in ``RMAN``::
+Because we are running a restore and recover, there is an unfortunate problem, the various ``_FILE_NAME_CONVERT`` parameters *do not work*. We have to do things manually *if we are changing the location of the various data files*\ . 
+
+In addition, the TEMP tablespace (and any other TEMPORARY tablespaces) do not get renamed by anything other than ``set newname for tempfile n to 'new\path\to\%b'``, which is a bit of a bind. (%b = the tempfile name, without the path part.) 
+
+Most of our UV databases only have a single tempfile, so the following should be ok for those. If there are more tempfiles, then adjust accordingly.
+
+Execute the following commands in ``RMAN``:
+
+..  code-block:: none
 
     run {
     	allocate channel d1
@@ -489,12 +586,41 @@ Because we are running a restore and recover, there is an unfortunate problem, t
 
         set until sequence 74;  # One more than required!
         
+        #=============================================================
         # ONLY if changing the data file paths.
         # Leave out if restoring to the same path as was dumped from.
-        @e:\backups\azdba01\rename_dbfiles.rman
+        #=============================================================
+        # This is the hard way - we rename all data and temp files.
+        # UNCOMMENT to use this method, 
+        # or leave commented to use the easy way below.
+        #-------------------------------------------------------------
+        
+        # @rename_dbfiles.rman
+        #
+        #-------------------------------------------------------------
+        # This is the easy (and recommended) way. 
+        # COMMENT out to use the hard way above.
+        # EDIT to use the correct drive letter. 
+        # %d, lowercase = (new) database name.
+        # %b, lowercase = filename stripped of the path.        
+        #-------------------------------------------------------------
+
+        set newname for database to '?:\mnt\oradata\%d\%b';
+        #        
+        #-------------------------------------------------------------
+        # TEMP files are a right pain and have to be done manually.
+        # COMMENT out to use the hard way above.
+        # EDIT to use the correct drive letter here too.
+        # %d, lowercase = (new) database name.
+        # %b, lowercase = filename stripped of the path.        
+        #-------------------------------------------------------------
+
+        set newname for tempfile 1 to '?:\mnt\oradata\%d\%b';
+        #=============================================================
 
         restore database;
         switch datafile all;
+        switch tempfile all;
         recover database; 
 
         release channel d5;
@@ -503,19 +629,21 @@ Because we are running a restore and recover, there is an unfortunate problem, t
         release channel d2;
         release channel d1;
     }
+At this point, the database is restored and recovered, but is not yet open, it remains mounted.
+    
+    **Note**: TEMP files are never backed up. So they cannot be restored either. What will happen is that they will be recreated when you open the database.
 
-At the end of the recovery phase, you should note that the desired a message showing that your chosen sequence of archived log, 73 in this exercise, was applied to the database. If you forgot to add one, and sequence 73 has not been applied, simply run the following in your ``RMAN`` session::
+At the end of the recovery phase, you should see a message showing that your chosen sequence of archived log, 73 in this exercise, was applied to the database. If you forgot to add one, and sequence 73 has not been applied, simply run the following in your ``RMAN`` session::
 
     recover database until sequence 74;
 
 And the desired log will be applied to bring the database up to where it needed to be - assuming that archived log sequence 73 is available in the appropriate backup location of course!
 
-If there is an error about archived logs missing and required to bring the database up to your chosen sequence, these will need to be restored - preferably to their original location - and made available to the running ``RMAN`` session. See below for details *before* proceeding. The error will resemble the following::
+If there is an error about some archived logs being missing but being required to bring the database up to your chosen sequence, these will need to be restored - preferably to their original location - and made available to the running ``RMAN`` session. See the *Missing Archived Logs* section for details *before* proceeding. The error will resemble the following::
 
     RMAN-06025: no backup of archived log for thread 1 with sequence 70 and starting SCN of 928588642 found to restore
 
-In this case we need to restore sequences 70 through 73 from a backup, and make these available to the destination server. See below for details before proceeding with the following.
-
+In this case we need to restore sequences 70 through 73 from a backup, and make these available to the destination server. See *Missing Archived Logs* below, for details on how to restore the missing log files before proceeding.
     
 Once all the archived logs have been applied, up to and including the desired sequence of 73, in this case, exit from RMAN. 
 
@@ -533,54 +661,43 @@ Start sqlplus::
     -- Do the following always after a SET UNTIL ... restore and recover.
     alter database open resetlogs;
     
-That's it. The database has been restored on a new server. 
+If you see the following error, or one very similar, after the above command is executed, you have a slight problem::
+
+    alter database open resetlogs
+    *
+    ERROR at line 1:
+    ORA-00392: log 9 of thread 1 is being cleared, operation not allowed
+    ORA-00312: online log 9 thread 1: 'G:\MNT\ORADATA\AZSTG02\REDO9A.LOG'
+    ORA-00312: online log 9 thread 1:
+    'H:\MNT\FAST_RECOVERY_AREA\AZSTG02\REDO9B.LOG'
+
+As the log files don't actually exist yet, we can safely clear them out, which simply initialises them, which is what we are trying to do anyway! First we need to determine which logfile group the logfile belongs to:
+
+..  code-block:: sql
+
+    select group# from v$logfile where member = 'H:\MNT\FAST_RECOVERY_AREA\AZSTG02\REDO9B.LOG';
+
+        GROUP#
+    ----------
+             9
+
+And once we know the group, we can clear it and open the database:
+
+..  code-block:: sql
+
+    alter database clear logfile group 9;
+    Database altered.
+
+    alter database open resetlogs;
+    Database altered.    
+    
+That's it. The database has been restored onto a new server. 
 
 If this was simply a backup test restore, then it seems to have worked.
 
-See the section below on tidying up, for details of what might be required next, regardless of whether the database restore was an exercise or if the database just restored will be kept and used.
+See the section below, *Tidying Up*, for details of any possible tidying up that may be required, regardless of whether the database restore was an exercise or if the database just restored will be kept and used.
 
 
-Missing Archived Logs
-=====================
-
-It is *occasionally* possible that some of the archived logs required for the above recovery of the database are not present on disc. They may have been archived off to a backup vault, or whatever. They must be restored to the location visible to the database being recovered.
-
-    **Warning:** You will be using the catalog here and so, any restores of archived logs *will affect the source database* as future backups will attempt to backup the archived logs in the location you are about to restore into.
-
-During the recovery phase, ``RMAN`` complained about the following::
-
-    RMAN-06025: no backup of archived log for thread 1 with sequence 70 and starting SCN of 928588642 found to restore
-
-As we require up to and including sequence 73, we will probably need to restore sequences 70 through 73. We do this in a *separate ``RMAN`` session* to the one running the recovery.
-
-To restore to the *same location* that the archived logs were backed up from::
-
-    run {
-        allocate channel d1 device type disk;
-        restore archivelog from sequence 70 until sequence 73;
-        release channel d1;
-    }
-
-On the other hand, to restore to a *different location*\ ::
-
-    run {
-        allocate channel d1 device type disk;
-        
-        set archivelog destination to 'e:\backups\azdba01';
-        
-        restore archivelog from sequence 70 until sequence 73;
-        release channel d1;
-    }
-
-If you use the latter, to restore the archived logs directly to the *destination* server, and you intend to keep the *source* database, then you *must* run the following commands on the *source server* against the *source database*\ ::
-
-    rman target sys/password catalog rman11g/<password>@rmancatsrv
-    crosscheck archivelog all;
-    exit
-    
-**Do not** run a ``delete obsolete`` command afterwards as that will get rid of more than just the obsloete archived logs on the non-existent ``e:\backups\\azdba01`` location! In addition, because the database backups are kept for 7 years - for legal reasons - any that have been archived off of the online backup discs will appear as obsolete. So, you might just have deleted them from the catalog. Luckily, they can be copied back from the vault and re-catalogued if required, but it's best to avoid the problem in the first place.
-    
-    
 Validation Restore
 ==================
 
@@ -641,7 +758,7 @@ That's it. The most recent incremental level 0 database backup has been validate
 
     **You are warned**\ , again, that any level 1 backups taken since the newly validated level zero, have *not* been applied nor validated. This is a risk as it means that the level 1 backup files have not been validated. Equally, none of the required archived logs have been validated either.
 
-See the section below on tidying up, for details of what might be required next.
+See the section, *Tidying Up*, below for details of what might be required next, even after a validation restore.
 
 
 Tidying Up
@@ -650,10 +767,36 @@ Tidying Up
 Keeping the Database
 --------------------
 
+If the database is being kept, for any reason, we need to be running with an spfile.
+
+..  code-block:: sql
+
+    create spfile=`?\database\spfileAZDBA01.ora`
+    from pfile=`?\database\initAZDBA01.ora`;
+    
+    shutdown
+    startup -- MOUNT or OPEN etc. Depending on other work to follow.
+
+
 For PreProduction or Similar
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If the database just restored is to be kept, perhaps as a pre-production database, then you must ensure that all depersonalisation scripts are executed after the database has been restored. 
+Drop Standby Logs
+"""""""""""""""""
+
+If the database just restored is to be kept, perhaps as a pre-production database, then you may wish to drop all the standby redologs. If the database is to be used in a standby pairing, then these will be recreated. Otherwise, they simply waste disc space.
+
+..  code-block:: sql
+
+    select distinct 'alter database drop standby logfile group ' || to_char(group#) || ';'
+    from v$logfile 
+    where type = 'STANDBY' 
+    order by 1;
+
+You may copy & paste the resulting output to drop the standby logfile groups.    
+
+Rename the Database
+"""""""""""""""""""
 
 In addition, the database *must* be renamed using the ``nid`` utility as it currently has the same ``DBID`` as the database it was restored from and if you attempt to back it up, you may corrupt the backup details for the source database, in the catalogue.
 
@@ -677,13 +820,73 @@ In a DOS (shell) session:
 
     nid target=sys/password dbname="new name" setname=y logfile=nid.log
     
-The database will be left closed when the above command completes.
+The database will be left closed when the above command completes. You *must* check the logfile.
 
-You will need to ensure that spfiles, password files are valid.
+If the logfile shows something like the following, then attention is required:
+
+..  code-block:: none
+
+    ORA-20000: File E:\MNT\ORADATA\CFG\TEMP01.DBF has wrong dbid or dbname, 
+               remove or restore the offending file.
+    ORA-06512: at "SYS.X$DBMS_BACKUP_RESTORE", line 6972
+    ORA-06512: at line 1
+
+The RMAN restore doesn't rename the temporary files. These need to be dropped and recreated.
+
+..  code-block:: sql
+
+    alter database tempfile 'E:\MNT\ORADATA\CFG\TEMP01.DBF' drop;
+    Database altered.    
+
+You should check for other temp files before continuing:
+
+..  code-block:: sql
+
+    select name from v$tempfile;
+    no rows selected   
+    
+Then exit from the database.
+
+In a DOS (shell) session:
+
+..  code-block::
+
+    nid target=sys/password dbname="new name" setname=y logfile=nid.log
+    
+The database will be left closed when the above command completes. You *must* check the logfile again.
+
+Once the database has been renamed, there's a little more work to do.
+
+- In %ORACLE_HOME%\database, rename the password file to the new database name.
+- In %ORACLE_HOME%\database, copy the spfile to one with the new database name.
+- startup MOUNT the database. You may get told that the database name in the controlfile is still the old one.
+
+..  code-block:: sql
+
+    alter system set db_name='AZDBA01' scope=spfile;
+    shutdown
+    startup mount
+
 
 You will need to register the database in ``RMAN`` if it is to be backed up.
 
-    
+Depersonalise the Data
+""""""""""""""""""""""
+
+You must ensure that all depersonalisation scripts are executed after the database has been restored. 
+
+Scripts are available in TFS, at ``TA\MAIN\Source\UKRegulated\Database\Depersonalisation\Depers & Shrink``, which will:
+
+- Carry out a full depersonalisation of the email addresses, table data and UAT account setup - ``full_depers.sql``; or
+- Carry out a partial depersonalisation of only the emails and UAT setup. Table data are not touched. The script is ``partial_depers.sql``.
+
+The latter is for times when the users request a 'non-depersonalised' database refresh, usually, from ``AZSTG01``, the former is for 'depersonalised' database refreshes.
+
+
+Other Requirements
+""""""""""""""""""
+
+You may also need to carry out some or all of the steps below. This is as appropriate to the purpose of the restored database.    
 
 For Migration Purposes
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -695,12 +898,6 @@ If this was a required restore onto a new server, perhaps to migrate a database,
     -- Reapply block change tracking.
     alter database enable block change tracking
     using file 'e:\mnt\fast_recovery_area\azdba01\bct.dbf' reuse;
-    
-    -- Make sure we run with an spfile.
-    create spfile=`%ORACLE_HOME%\database\spfileAZDBA01.ora`
-    from pfile=`%ORACLE_HOME%\database\initAZDBA01.ora`;
-    shutdown immediate;
-    startup;
     
     -- Make sure we are in force logging mode.
     select force_logging from v$database;
@@ -758,3 +955,47 @@ The temporary service we created with ``oradim`` should have been deleted when w
 
 If, and only if, you physically copied the backup files from the source server to the destination server, you may now wish to remove said files from the backup area, ``e:\backups\azdba01`` in this exercise, as they are no longer required. 
 
+
+Missing Archived Logs
+=====================
+
+If the database restored and recovered, without complaining about missing archived logs, then you may skip this section.
+
+It is *occasionally* possible that some of the archived logs required for the above (physical) recovery of the database are not present on disc. They may have been archived off to a backup vault, for example. They must be restored to the location visible to the database being recovered.
+
+    **Warning:** You will be using the catalog here and so, any restores of archived logs *will affect the source database* as future backups will attempt to backup the archived logs in the location you are about to restore into.
+
+During the recovery phase, ``RMAN`` complained about the following::
+
+    RMAN-06025: no backup of archived log for thread 1 with sequence 70 and starting SCN of 928588642 found to restore
+
+As we require up to and including sequence 73, we will probably need to restore sequences 70 through 73. We do this in a *separate ``RMAN`` session* to the one running the recovery.
+
+To restore to the *same location* that the archived logs were backed up from::
+
+    run {
+        allocate channel d1 device type disk;
+        restore archivelog from sequence 70 until sequence 73;
+        release channel d1;
+    }
+
+On the other hand, to restore to a *different location*\ ::
+
+    run {
+        allocate channel d1 device type disk;
+        
+        set archivelog destination to 'e:\backups\azdba01';
+        
+        restore archivelog from sequence 70 until sequence 73;
+        release channel d1;
+    }
+
+If you use the latter, to restore the archived logs directly to the *destination* server, and you intend to keep the *source* database, then you *must* run the following commands on the *source server* against the *source database*\ ::
+
+    rman target sys/password catalog rman11g/<password>@rmancatsrv
+    crosscheck archivelog all;
+    exit
+    
+**Do not** run a ``delete obsolete`` command afterwards as that will get rid of more than just the obsolete archived logs on the non-existent ``e:\backups\\azdba01`` location! In addition, because the database backups are kept for 7 years - for legal reasons - any that have been archived off of the online backup discs will appear as obsolete. So, you might just have deleted them from the catalog. Luckily, they can be copied back from the vault and re-catalogued if required, but it's best to avoid the problem in the first place.
+    
+    

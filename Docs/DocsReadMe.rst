@@ -43,6 +43,9 @@ BrokenLatex
 DatabaseHandover
     Handover document for when my contract expires and some other victim has to take on my work.
     
+DBADailyChecks
+    What needs to be checked on a daily basis and details of some potentially useful scripts to do it.
+    
 GeneratingEXPParameterFiles
     How to install and use the 9i package that generates the desired ``exp`` parameter files to assist in parallelising the exports from Solaris 9i, and the imports on Azure 11g.
     
