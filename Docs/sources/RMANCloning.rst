@@ -178,7 +178,7 @@ maximum advised.
 **Warning:** When cloning between two databases on the same server, 
 the ``nofilenamecheck`` parameter *must* be *omitted*. This
 prevents the clone process from inadvertently overwriting
-target database files with auxiliary database files - if yo somehow managed to mess up the various ``xxx_file_name_convert`` parameters. 
+target database files with auxiliary database files - if you somehow managed to mess up the various ``xxx_file_name_convert`` parameters. 
 
 This parameter *must never* be specified when cloning to the *same* server.
 
@@ -203,15 +203,28 @@ Run the following on the target database to extract the settings. The script run
     -- Check for DATA FILES...
     -- Uses '\' for Windows and '/' for UNIX.
     -- Use the output to set up DB_FILE_NAME_CONVERT's "from" values.
+    -- we must also consider block change tracking files which will be
+    -- located in the FRA according to our standards.
     --
     with db as (
     --
+        -- Data files first.
         select distinct  
                substr(file_name, 0, instr(file_name, '\', -1)) as value
         from dba_data_files 
         union all
-        select distinct substr(file_name, 0, instr(file_name, '/', -1)) 
-        from dba_data_files 
+        select distinct 
+               substr(file_name, 0, instr(file_name, '/', -1)) 
+        from dba_data_files
+        union all
+        -- Block Change Tracking file.
+        select substr(filename, 0, instr(filename, '\', -1))
+        from v$block_change_tracking
+        where status = 'ENABLED'
+        union all
+        select substr(filename, 0, instr(filename, '/', -1))
+        from v$block_change_tracking
+        where status = 'ENABLED'    
     ),
     --
     redo as (
@@ -255,7 +268,9 @@ Run the following on the target database to extract the settings. The script run
             'SPFILE',
             'STANDBY_ARCHIVE_DEST',
             'USER_DUMP_DEST',
-            'NLS_DATE_FORMAT'
+            'NLS_DATE_FORMAT',
+            'DB_FILE_NAME_CONVERT',
+            'LOG_FILE_NAME_CONVERT'
         )
     )
     --
@@ -285,6 +300,8 @@ We can ignore any of the following parameters:
     - ``USER_DUMP_DEST``
 
 - ``NLS_DATE_FORMAT`` :-)  
+- ``DB_FILE_NAME_CONVERT``
+- ``LOG_FILE_NAME_CONVERT``
 
 These are explicitly set by the ``RMAN`` commands to create the clone database 
 or default to acceptable values when the database is created and/or opened.
@@ -296,9 +313,15 @@ The output from the above will resemble the following:
     PARAMETER               VALUE
     ----------------------- -----------------------------------
     DB_FILE_NAME_CONVERT    G:\MNT\ORADATA\AZSTG02\
+    DB_FILE_NAME_CONVERT    H:\MNT\FAST_RECOVERY_AREA\AZSTG02\
     LOG_FILE_NAME_CONVERT   G:\MNT\ORADATA\AZSTG02\
     LOG_FILE_NAME_CONVERT   H:\MNT\FAST_RECOVERY_AREA\AZSTG02\
 
+These values can be specified as "from" values in the appropriate parameter in
+the following clone scripts.
+
+In the example above, PARAMETER_VALUE_CONVERT is not listed and so, that section of 
+the following clone scripts will not be required, in this case.
 
 Cloning A Staging Database to the Same Server
 =============================================
