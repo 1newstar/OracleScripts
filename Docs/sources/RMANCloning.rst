@@ -124,7 +124,7 @@ Add an entry for the database to the listener.ora on the auxiliary server:
         )
       )
 
-This is required because when the database is not ``OPEN``, it is not registered with the listener and so cannot be reached from ``RMAN``.
+This is required because when the database is not ``OPEN``, it is not registered with the listener and so cannot be reached from ``RMAN``. You will know if you forget to do this as the ``RMAN`` command will show a message that the listener is *blocking all connections* to the auxiliary database, when you start the cloning process.
 
 Stop and start the listener service:
 
@@ -206,6 +206,9 @@ Run the following on the target database to extract the settings. The script run
     -- we must also consider block change tracking files which will be
     -- located in the FRA according to our standards.
     --
+    
+    set lines 2000 trimspool on pages 2000
+    
     with db as (
     --
         -- Data files first.
@@ -320,11 +323,15 @@ The output from the above will resemble the following:
 These values can be specified as "from" values in the appropriate parameter in
 the following clone scripts.
 
+    **Note**\ : You *may* be wondering why the FRA is listed as a "from" parameter for  ``DB_FILE_NAME_CONVERT`` in the above output. This is because the ``BLOCK CHANGE TRACKING`` file lives in the FRA and is considered a data file. If the script detects that a BCT file is in use, and is in the FRA, then it will be listed.
+    
+    If this is not done, creating the BCT file will fail as part of the clone, and you will have to do it manually.
+
 In the example above, PARAMETER_VALUE_CONVERT is not listed and so, that section of 
 the following clone scripts will not be required, in this case.
 
-Cloning A Staging Database to the Same Server
-=============================================
+Cloning to the Same Server
+==========================
 
 The following outlines the steps followed in order to clone, using RMAN
 active duplicate, the T_DB database, to a new database, A_DB, on the *same*
@@ -351,6 +358,8 @@ use one on both databases:
 
     rman target sys/password@T_DB auxiliary sys/password@A_DB
 
+If you cannot connect to the auxiliary database, A_DB, as connections are being blocked, you forgot to edit/save ``listener.ora`` to add the auxiliary database to the ``SID_LIST_LISTENER`` parameter. As the auxiliary database is in ``NOMOUNT`` status, it is not yet registered with the listener - and will not be, until it ``OPEN``s.
+    
 ..  code-block::
 
     # Clone A_DB from T_DB using RMAN.
@@ -408,8 +417,8 @@ When complete, skip the next section and continue from
 *Post Clone Tidy-up and Checks* below.
 
 
-Cloning A Staging Database to a Different Server
-================================================
+Cloning to a Different Server
+=============================
 
 The following outlines the steps followed in order to clone, using RMAN
 active duplicate, the T_DB database, to a new database named A_DB.
@@ -433,6 +442,8 @@ auxiliary database. For best results, use one on both databases:
 
     rman target sys/password@T_DB auxiliary sys/password@A_DB
 
+If you cannot connect to the auxiliary database, A_DB, as connections are being blocked, you forgot to edit/save ``listener.ora`` to add the auxiliary database to the ``SID_LIST_LISTENER`` parameter. As the auxiliary database is in ``NOMOUNT`` status, it is not yet registered with the listener - and will not be, until it ``OPEN``s.
+    
 ..  code-block::
 
     # Clone A_DB from T_DB using RMAN.
@@ -721,8 +732,8 @@ following while logged in as SYS:
     DROP PACKAGE pk_access_setup;
 
 
-Register Database for RMAN Backups
-==================================
+Register Database in RMAN
+=========================
 
 If the databases are to be backed up using RMAN, then they must be
 registered with the RMAN catalog.
