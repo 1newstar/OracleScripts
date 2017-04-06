@@ -144,19 +144,19 @@ Database Design
 
     ... CHECK(Mortality in ('Y','N',NULL)) ...
     
-  These constraints are totally disabled by the presence of NULL, and any value is allowed in the column, not just the desired Ys and Ns. A more correct specification would be:
+These constraints are totally disabled by the presence of NULL, and any value is allowed in the column, not just the desired Ys and Ns. A more correct specification would be:
 
 ..  code-block:: sql
 
     ... CHECK(NVL(Mortality, 'N') in ('Y','N')) ...
     
-  or:
+or:
     
 ..  code-block:: sql
 
     ... CHECK(Mortality in ('Y','N') or Mortality IS NULL) ...
     
-   A number of the various TAKEON_XXXXX schemas are also afflicted with this problem.
+A number of the various TAKEON_XXXXX schemas are also afflicted with this problem.
    
    Reference: <http://qdosmsq.dunbar-it.co.uk/blog/2016/08/dropping-temporary-tables-with-bonus-broken-check-constraints/>
    

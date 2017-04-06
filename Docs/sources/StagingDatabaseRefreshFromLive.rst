@@ -72,7 +72,7 @@ Finally, stop the existing Oracle service:
 Restore the CFG Database Dumps
 ==============================
 
-The production database backup files can now be restored to the pre-production server as a new database named ``CFG``, as per the instructions in the *DatabaseRestore.docx* document available from TFS, from the same location as this document, which is *TA\\DEV\\Projects\\Oracle Upgrade 9i to 11g\\UKRegulated\\Database\\DBA Documentation*\ .
+The production database backup files can now be restored to the pre-production server as a new database named ``CFG``, as per the instructions in the *RMANRestore.docx* document available from TFS, at *TA\\DEV\\Projects\\Oracle Upgrade 9i to 11g\\UKRegulated\\Database\\DBA Documentation*\ .
 
     **Note**\ : be aware that the example given in that document is a restore of the azdba01 database, which was indeed the database restored when the document was created. You should replace paths and database names to match the ``CFG`` database that you will be restoring.
 

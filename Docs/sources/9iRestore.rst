@@ -57,28 +57,28 @@ Known Problem Areas
         EXP-00008: ORACLE error 1455 encountered
         ORA-01455: converting column overflows integer datatype
     
-    This error can appear *after* a table name - caused by the table having no allocated segments yet - or after all tables - caused by snapshot logs existing in 11g. In the case of the latter, an SR was opened with Oracle for investigation. 
+  This error can appear *after* a table name - caused by the table having no allocated segments yet - or after all tables - caused by snapshot logs existing in 11g. In the case of the latter, an SR was opened with Oracle for investigation. 
     
-    In the case of the former the solution is to run a script that will allocate an extent to any table that has no extents allocated - these will be tables with no rows. A script, *deferred_segments.sql*, has been supplied to do this.
+  In the case of the former the solution is to run a script that will allocate an extent to any table that has no extents allocated - these will be tables with no rows. A script, *deferred_segments.sql*, has been supplied to do this.
 
 - The following error may result during the 9i export::
 
-        Table UKFATCASubmissionFIRe98_TAB will be exported in conventional path.
-        . . exporting table    UKFATCASubmissionFIRe98_TAB
-        EXP-00056: ORACLE error 31013 encountered
-        ORA-31013: Invalid XPATH expression
-        ORA-06512: at "XDB.DBMS_XDBUTIL_INT", line 482 
+      Table UKFATCASubmissionFIRe98_TAB will be exported in conventional path.
+      . . exporting table    UKFATCASubmissionFIRe98_TAB
+      EXP-00056: ORACLE error 31013 encountered
+      ORA-31013: Invalid XPATH expression
+      ORA-06512: at "XDB.DBMS_XDBUTIL_INT", line 482 
     
-    However, the table in question is blank in 11g at present and will already exist in 9i prior to the import running, so not a great problem. However, SR 3-1379877961 has been raised for this and the other problem mentioned above, error ORA-01455 on the NOROWS export.
+  However, the table in question is blank in 11g at present and will already exist in 9i prior to the import running, so not a great problem. However, SR 3-1379877961 has been raised for this and the other problem mentioned above, error ORA-01455 on the NOROWS export.
     
-    The workaround/solution, for the ORA-01455 errors, as supplied by Oracle, is to:
+  The workaround/solution, for the ORA-01455 errors, as supplied by Oracle, is to:
     
-    .. code-block:: sql
+  .. code-block:: sql
     
-        drop snapshot log on fcs.investor;
-        drop snapshot log on fcs.ordtran;
+      drop snapshot log on fcs.investor;
+      drop snapshot log on fcs.ordtran;
         
-    You may also wish to examine the DBA_SNAPSHOTS and DBA_SNAPSHOT_LOGS to determine if any others need dropping - for the users we are about to export only though.
+  You may also wish to examine the DBA_SNAPSHOTS and DBA_SNAPSHOT_LOGS to determine if any others need dropping - for the users we are about to export only though.
     
 - Tables which use sequences to populate a primary (or unique) key column will have a higher ``nextval`` in the 11g database than those in the 9i database. This could, if not resolved, cause duplicate key values, or unique constraint violations post import.
 - Sequences cannot be imported by themselves. They must be imported from the NOROWS export file as they do not exist in the various FCS* export files as these are table level exports.
