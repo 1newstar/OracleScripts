@@ -192,7 +192,7 @@ The Easy Way
 
 The *easy way* is to get RMAN to do all that for you. If, and only if, *all* the data files are located in the same folder, then adding the following line to the RMAN command to restore the database, will rename the data files correctly. **Beware** that it will not rename the temp files though, contrary to what the manual states.
 
-..  code_block:: none
+..  code-block:: none
 
     set newname for database to '?:\mnt\oradata\%d\%b';
     
