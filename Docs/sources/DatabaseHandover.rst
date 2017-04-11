@@ -417,28 +417,22 @@ The ``sqlnet.ora`` file must resemble the following in order for the application
     # install "Software Only", this file won't exist and without the native 
     # authentication, they will not be able to connect to the database on NT.
 
+    ## This should prevent connections being dropped
+    ## if not used for a while. It sends a probe
+    ## to check for dead connections every 'n' minutes.
+    ## Restart the listener if you change it.
+    SQLNET.EXPIRE_TIME = 10
+
     ## You need this one to start the databases with "/ as sysdba"
     ## Or to run the dbRefresh.cmd script to refresh a database.
     ## Or to run an RMAN backup.
     #SQLNET.AUTHENTICATION_SERVICES = (NTS)
 
-    ## This should prevent connections being dropped
-    ## if not used for a while. It sends a probe
-    ## to check for dead connections every 'n' minutes.
-    Restart the listener if you change it.
-    SQLNET.EXPIRE_TIME = 10
-
     ## You need this one for normal running.
     SQLNET.AUTHENTICATION_SERVICES = (NONE)
     
-    ## This should prevent connections being dropped
-    ## if not used for a while. It sends a probe
-    ## to check for dead connections every 'n' minutes.
-    Restart the listener if you change it.
-    SQLNET.EXPIRE_TIME = 10
-
     
-The final line is the required setting.
+The final line is the required setting for normal running.
 
 This of course, prevents DBAs from connecting to anything, or running RMAN with only the '/ [as sysdba]' option, which means that the various scripts to backup the databases etc, require a SYS password to be passed. This implies that when the SYS password is changed, scripts and scheduler tasks will need updating.
 
