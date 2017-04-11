@@ -424,8 +424,8 @@ Start the instance from RMAN, as follows, without a catalog connection::
 It is assumed that the appropriate backup files are (now) available on the destination server, either copied across (as in this example) or via a full UNC path specification. See *Determining Which Backup Files are Required*, above, for details on how to extract the names of the backup pieces etc that require to be copied from the source server.
     
     
-Restore the SPFILE
-------------------
+Restore the SPFILE as a PFILE
+-----------------------------
 
 Enter the following commands in ``RMAN`` to restore the SPFILE for azdba01 as a text based PFILE. The DBID in use is that recorded earlier when we collected the required data about the ``RMAN`` backup we are restoring.
 
@@ -436,45 +436,68 @@ Enter the following commands in ``RMAN`` to restore the SPFILE for azdba01 as a 
     to pfile '?\database\initAZDBA01.ora' 
     from 'e:\backups\azdba01\<file_name>';
     
+    
+Editing the PFILE
+-----------------    
+    
+Always Edit the Following
+~~~~~~~~~~~~~~~~~~~~~~~~~
+    
 When the restore has finished, open the file in a separate session and edit the following, *non-exclusive* list of parameters:
 
 - Anything that *does not* begin with an asterisk ('*') should be deleted;
-- Delete DB_FILE_NAME_CONVERT if present;
+- Delete DB_FILE_NAME_CONVERT if present.
+- Make sure that the CONTROL_FILES setting is correct for this new database. There should be one in ORADATA and one in the FRA.
 - Make sure that the DB_RECOVERY_FILE_DEST setting is correct for this new database.
-- Make sure that the CONTROL_FILES setting is correct for this new database. There should be one in ``ORADATA`` and one in the FRA.
-- Delete FAL_SERVER and FAL_CLIENT if present;
-- Delete LOCAL_LISTENER if present;
-- Delete LOG_ARCHIVE_CONFIG if present;
+- Ensure DG_BROKER_START is set to FALSE.
+- Delete FAL_SERVER and FAL_CLIENT if present.
+- Delete LOCAL_LISTENER if present.
+- Delete LOG_ARCHIVE_CONFIG if present.
 - Delete LOG_ARCHIVE_DEST_2 upwards. Keep only dest 1.
 - Delete LOG_ARCHIVE_DEST_STATE_2 upwards. Keep only state 1.
-- Delete LOG_FILE_NAME_CONVERT if present;
-- Set PGA_AGGREGATE_TARGET to 100m;
-- Delete REMOTE_LISTENER if present;
-- Set SGA_TARGET to 2g; (Or adjust as appropriate for the database.)
-- Set SGA_MAX_SIZE to 3g; (Or adjust as appropriate for the database.)
+- Delete LOG_FILE_NAME_CONVERT if present.
+- Set PGA_AGGREGATE_TARGET to 100m.
+- Delete REMOTE_LISTENER if present.
+- Set SGA_TARGET to 2g. (Or adjust as appropriate for the database.)
+- Set SGA_MAX_SIZE to 3g. (Or adjust as appropriate for the database.)
+
+If the Source Database was Data Guarded
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Additionally, if the restore is taken from a Data Guarded database, then remove anything to do with the standby:
 
-- Ensure DG_BROKER_START is set to FALSE;
+- Ensure DG_BROKER_START is set to FALSE.
+
+If the Source Database was RAC Clustered
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If the restore is taken from an RAC database, then ensure that all RAC specific parameters are removed:
 
-- Ensure CLUSTER_DATABASE, if present, is set to FALSE;
-- Ensure INSTANCE_NAME, if present, matches DB_BNAME;
-- Ensure INSTANCE_NUMBER, if present, is set to 0;
+- Delete CLUSTER_DATABASE.
+- Delete INSTANCE_NAME.
+- Delete INSTANCE_NUMBER.
 
-Finally, was the dump taken from a *standby* database? Fix these parameters, and any others you may find, to be those of the desired *primary* database:
+If the Source Database was a Standby
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Ensure that AUDIT_FILE_DEST refers to the primary database, not the standby;
-- Ensure that the CONTROL_FILES refer to the primary database and not the standby;
-- Ensure DB_UNIQUE_NAME, if present, matches DB_NAME and is correct for the primary database in question;
-- Ensure that DISPATCHERS refers to the primary database, not the standby;
-- Ensure that LOG_ARCHIVE_DEST_1 is set to 'LOCATION=USE_RECOVERY_FILE_DEST';
+If the dump taken from a *standby* database? Fix the following parameters, and any others you may find, to be those of the desired *primary* database:
 
-Save the edited file.
+- Ensure that AUDIT_FILE_DEST refers to the primary database, not the standby.
+- Ensure DB_UNIQUE_NAME, if present, matches DB_NAME and is correct for the primary database in question.
+- Ensure that the CONTROL_FILES refer to the primary database and not the standby.
+- Ensure that DISPATCHERS refers to the primary database, not the standby.
+- Ensure that LOG_ARCHIVE_DEST_1 is set to 'LOCATION=USE_RECOVERY_FILE_DEST'.
+
+If the Restored Database is to be Renamed
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Ensure that AUDIT_FILE_DEST refers to what *will be* the new name of the database.
+- Change the location of the CONTROL FILES to suit the new database name.
+- Change the DISPATCHERS parameter - the SERVICE_NAME part of the parameter should be changed to ``NEW_DB``\ XDB.
+- Leave INSTANCE__NAME, DB_NAME and SERVICE_NAMES parameters untouched until *after* the rename of the database. 
 
 
-Mount the Instance & Restore the Controlfiles
+Start the Instance & Restore the Controlfiles
 ---------------------------------------------
 
 Still in ``RMAN``, restart the database with the new pfile and restore the control files::
