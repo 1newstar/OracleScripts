@@ -194,9 +194,9 @@ The *easy way* is to get RMAN to do all that for you. If, and only if, *all* the
 
 ..  code-block:: none
 
-    set newname for database to '?:\mnt\oradata\%d\%b';
+    set newname for database to '?:\mnt\oradata\XXXX\%b';
     
-In the code above, the '?' should be replaced by the drive letter where the data files are desired to be located on the destination server.
+In the code above, the '?' should be replaced by the drive letter where the data files are desired to be located on the destination server and the 'XXXX' should be replaced by the desired destination database name. (If we use '%d' for 'XXXX', the database name being restored will be used - which might not be what you want if the database will be renamed later.)
 
 
 Renaming Redo Logs
@@ -213,9 +213,11 @@ The result(s) can be used as the 'from' defines below - ``LOG_A_DRIVE`` and ``LO
 
 The redo logs are assumed to be found on two separate drives - the ORADATA for the 'a' variants of the logs, and the FRA for the 'b' variants. If these are to remain unchanged as drive letters after the rename, then simply set the appropriate drive letters accordingly below.
 
-Likewise, the database name in the path might be desired to be changed, in which case set those defines accordingly too, otherwise, set them to be the same, or something t hat cannot occur.
+Likewise, the database name in the path might be desired to be changed, in which case set those defines accordingly too, otherwise, set them to be the same, or something that cannot occur.
 
 ..  code-block:: sql
+
+    set lines 2000 pages 2000 trimspool on
 
     spool rename_logs.sql
     
@@ -623,22 +625,26 @@ Execute the following commands in ``RMAN``:
         #-------------------------------------------------------------
         # This is the easy (and recommended) way. 
         # COMMENT out to use the hard way above.
-        # EDIT to use the correct drive letter. 
-        # %d, lowercase = (new) database name.
+        # EDIT the following to use the correct drive letter & path. 
+        # XXXX, lowercase = (new) database name. Use %d if the database 
+        #                    will not be renamed later.
         # %b, lowercase = filename stripped of the path.        
         #-------------------------------------------------------------
 
-        set newname for database to '?:\mnt\oradata\%d\%b';
+        set newname for database to '?:\mnt\oradata\XXXX\%b';
         #        
         #-------------------------------------------------------------
         # TEMP files are a right pain and have to be done manually.
         # COMMENT out to use the hard way above.
-        # EDIT to use the correct drive letter here too.
-        # %d, lowercase = (new) database name.
-        # %b, lowercase = filename stripped of the path.        
+        # EDIT to use the correct drive letter & path here too.
+        # XXXX, lowercase = (new) database name. Use %d if the database 
+        #                    will not be renamed later.
+        # %b, lowercase = filename stripped of the path.  
+        #
+        # Add a line for each of the temp files in the source database.
         #-------------------------------------------------------------
 
-        set newname for tempfile 1 to '?:\mnt\oradata\%d\%b';
+        set newname for tempfile 1 to '?:\mnt\oradata\XXXX\%b';
         #=============================================================
 
         restore database;
