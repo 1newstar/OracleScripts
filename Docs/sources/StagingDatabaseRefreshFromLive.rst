@@ -253,20 +253,6 @@ If you make any changes then restart the database:
     startup
 
     
-Roles
------  
-  
-For *non-production* databases only, two roles will now require to be updated as their password is dependent on the database name, so they currently have the password of the originating database:
-
-..  code-block:: sql
-
-    column db_name new_value my_dbname noprint;
-    select name as db_name from v$database;
-
-    alter role NORMAL_USER identified by &&my_dbname.123;
-    alter role SVC_AURA_SERV_ROLE identified by &&my_dbname.123;
-
-    
 Scheduler Jobs
 --------------
 

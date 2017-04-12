@@ -77,7 +77,7 @@ For each database you wish to amend:
    -  Set the service startup as desired. Automatic is fine for all
       databases.
    -  Make sure that "This account" is selected.
-   -  Make sure that the credentails for svc\_oracleprod or
+   -  Make sure that the credentials for svc\_oracleprod or
       svc\_oracleppd are entered.
    -  Click Apply.
    -  Click OK.
@@ -440,7 +440,7 @@ This of course, prevents DBAs from connecting to anything, or running RMAN with 
 TNSNAMES.ORA
 ============
 
-**Note:** Any changes made to the ``tnsnames.ora`` file on a server, must be propagated to the others in that group of Production or Pre-production servers and to the central ``tnsnames.ora`` whichis located at ``\CFSLDSFP01\Apps.Net\Aura\TNSNAMES_CENTRE\``.
+**Note:** Any changes made to the ``tnsnames.ora`` file on a server, must be propagated to the others in that group of Production or Pre-production servers and to the central ``tnsnames.ora`` which is located at ``\CFSLDSFP01\Apps.Net\Aura\TNSNAMES_CENTRE\``.
 
 Because there are standby and DR databases configured, there are changes in the ``tnsnames.ora`` file to cope with this, regardless of which actual instance is running the database at any given point in time.
 
@@ -924,11 +924,20 @@ Password Changes
 
 After handover, there will be a need for stronger security measures in the database. Some passwords have been set to a working password, and will require changing after handover. Obviously, existing processes for changing passwords of affected database links etc will need to be followed.
 
+Password Vault
+--------------
+
+Passwords are (currently) stored, encrypted, in the KeePassX system. The database lives at ``\\cfsldsfp01\it$\DevOps_Leeds\devopssecure.kdbx`` as well as locally on everyone's PC.
+
+An Oracle Database Password Profile has been created within KeePassX to generate legal Oracle passwords of 20 characters, but it can create passwords with leading digits, which Oracle doesn't like. You can use this to generate new passwords. (Tools->Generate Password, choose the Oracle Database Password Format profile, click OK.)
+
 
 SYS & SYSTEM
 ------------
 
 The SYS and SYSTEM passwords on all databases will need changing on a regular basis.
+
+**Note 1:** If you change the SYS password for a primary database, it is not propagated to the standby database(s). In this case, you *must* copy the password file from the primary to the standby database(s) and rename the file accordingly. That will carry out the necessary password change on the standby database(s).
 
 **Note:** Any changes to the SYS password will require an edit of the various RMAN backup jobs configured in the Windows Task Scheduler. From Oracle 12c, however, there is a dedicated role set up to allow a user, not SYS, to be configured to run backups with RMAN. This is not yet possible in 11g.
 
@@ -939,7 +948,7 @@ In OEM as the ``fs_dba`` account, change the ``monitoring credentials`` for the 
 
 -   Go to ``setup``->``security``->``monitoring credentials``
 -   Select target type of ``Database Instance``
--   Click ``Manage monitoring credentails``
+-   Click ``Manage monitoring credentials``
 -   Select ``Monitoring Database Credentials`` in the drop down & click ``search``.
 -   Select the correct database and click ``set credentials``.
 -   Enter the new password twice and click ``test and save``.
