@@ -81,7 +81,14 @@ add the A_DB to the target server's ``tnsnames.ora`` file.
 Prepare the Auxiliary server
 ============================
 
-Open an Administrator enabled command session. Run the following
+If the auxiliary database (A_DB) already exists and this is a refresh exercise, you must:
+
+-   Shutdown (abort is fine) the database;
+-   Delete the contents of the oradata area for this database;
+-   Delete the contents of the FRA for this database;
+
+Otherwise, if this is a new database being cloned, then a service will be needed, so open an 
+administrator enabled command session. Run the following
 command replacing "A_DB" as appropriate:
 
 ..  code-block:: batch

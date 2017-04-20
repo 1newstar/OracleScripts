@@ -39,3 +39,5 @@ The following is a non-exclusive list of requirements that we expect to see in a
 
 - Any 'urgent' changes will be fully supported by the appropriate developer, on site at the time the code is to be deployed in case of errors/problems. The DBA shall not be left to deal with code problems.
 
+- Dates must be stored in DATE or TIMESTAMP columns. Passing dates (and times) to a script, or procedure for use in tables etc, must be done correctly. Strings are not acceptable, unless wrapped in a TO_DATE() or TO_TIMESTAMP() accordingly.
+
