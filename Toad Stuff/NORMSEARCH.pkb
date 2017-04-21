@@ -32,7 +32,8 @@ create or replace package body normSearch as
         
         -- A dynamic SQL statement.
         -- Change the size if something barfs!
-        vSQL varchar2(4096);
+        --vSQL varchar2(4096);
+        vSQL clob;
 
     begin
         -- Validation first.
