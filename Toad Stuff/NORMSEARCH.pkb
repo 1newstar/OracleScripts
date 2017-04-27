@@ -105,11 +105,12 @@ create or replace package body normSearch as
                        and      owner = vOwner
                        and      (data_type in ( 'CHAR', 'NVARCHAR2', 'VARCHAR2' )))
             loop 
-                vColumns := vColumns || ' when ' || y.column_name ||
-                q'< like sys_context('userenv','client_info') then >' ||
+                -- Added double quotes in case of mixed case names.
+                vColumns := vColumns || ' when "' || y.column_name ||
+                q'<" like sys_context('userenv','client_info') then >' ||
                 q'< '>' || y.column_name || q'<'>';
-                vWhereClause := vWhereClause || ' or ' || y.column_name || 
-                               q'< like sys_context('userenv','client_info') >';
+                vWhereClause := vWhereClause || ' or "' || y.column_name || 
+                               q'<" like sys_context('userenv','client_info') >';
                 
                 if (vDebug) then
                     dbms_output.put_line('    COLUMN: ' || y.column_name);
@@ -118,9 +119,10 @@ create or replace package body normSearch as
             end loop;
             
             -- Build the SQL...
+            -- Added double quotes in case of mixed case names.
             vSQL := 'select distinct ' || vColumns || 
-                    ' else null end cname from ' || vOwner || '.' ||
-                    x.table_name || vWhereClause || ')'; 
+                    ' else null end cname from "' || vOwner || '"."' ||
+                    x.table_name || '"' || vWhereClause || ')'; 
 
             
             if (vDebug) then
