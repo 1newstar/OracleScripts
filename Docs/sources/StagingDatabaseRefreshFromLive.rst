@@ -54,13 +54,15 @@ Navigate to ``g:\mnt\oradata\azstg02`` and shift-delete the *contents*.
 
 Navigate to ``h:\mnt\fast_recovery_area\azstg02`` and shift-delete the *contents*.
 
-Check that the old spfile, ``spfileazstg02.ora``, has gone from ``c:\oracledatabase\product\11.2.0\dbhome_1\database``.
+Check that the old spfile, ``spfileazstg02.ora``, has been deleted from ``%oracle_home%\database``.
 
-If a password file exists, leave it alone as we will reuse this. The file will be named  ``pwdazstg02.ora``. Ditto a pfile named ``initazstg02.ora`` which should only contain the following contents:
+If a password file exists, and it should, leave it alone as we will reuse this. The file will be named  ``pwdAZSTG02.ora``. Ditto a pfile named ``initAZSTG02.ora`` which should only contain the following contents:
 
 ..  code-block:: none
 
     db_name=azstg02
+
+If the ``initAZSTG02.ora`` file contains more than the above, edit out everything except the above.
     
 Finally, stop the existing Oracle service:
 
@@ -72,101 +74,431 @@ Finally, stop the existing Oracle service:
 Restore the CFG Database Dumps
 ==============================
 
-The production database backup files can now be restored to the pre-production server as a new database named ``CFG``, as per the instructions in the *RMANRestore.docx* document available from TFS, at *TA\\DEV\\Projects\\Oracle Upgrade 9i to 11g\\UKRegulated\\Database\\DBA Documentation*\ .
+The following describes how to restore a database dump of the ``CFG`` database to a different server, but still named ``CFG``. This is normal for a restore test of a database backup.
 
-    **Note**\ : be aware that the example given in that document is a restore of the azdba01 database, which was indeed the database restored when the document was created. You should replace paths and database names to match the ``CFG`` database that you will be restoring.
+However, we are restoring the ``CFG`` database dump to create a staging database, so as the restore progresses, we will divert some of the restored files etc to a *different location* that suits the desired staging database, which will be kept and used to create various testing, development and UAT databases.
 
-Return to this document when you have completed the restore.
+There are other ways to do this - cloning the staging database from the dumps, for example, but the process differs from that which would be used to restore a ``CFG`` backup to the ``CFG`` database, so we use that process here - for education and familiarity purposes.
+
+Brief Outline of the Restore Process
+------------------------------------
+
+The following steps will be discussed in full below, and are listed here for information as to what you are about to do.
+
+-   Collect information about the backup you will be restoring.
+-   Create a new ``CFG`` Oracle Service using ``oradim``.
+-   Make sure that the ``tnsnames.ora`` alias for CFG is commented out on the server we are restoring to.
+-   Nomount the instance and restore the spfile.
+-   Edit the parameters.
+-   Nomount the instance and restore the control files.
+-   Mount the instance and restore & recover the database.
+
+That's it, the database will then be ready for a post restore clean up and will be suitable for renaming.
 
 
+Collect Required Information
+----------------------------
 
-Rename the Database Using 'Nid'
-===============================
+The following information is required to be noted prior to restoring the ``CFG`` backup. The details can be found in the log files for the actual back, and these are located in ``\\Backman01\RMANBackup\backups\logs\cfg``. The log files are named ``RMAN_level_x.yyyymmdd_hhmm.log`` where 'x' is the level, zero or one, and yyyymmdd and hhmm indicate the date and time of the start of the backup.
 
-If you did not rename the database as part of the restore, then you must do it now.
+You will need:
 
-The database will be renamed using the ``nid`` utility as it currently has the same ``DBID`` as the database it was restored from, ``CFG``, and if you attempt to back it up, you may corrupt the backup details for the CFG database, in the ``RMAN`` catalogue.
+-   The ``CFG`` database identifier, DBID, this is usually : 2092933938 but check. (See below.)
+-   The archive log sequence for the last archive log backed up.
+-   The Control File/spfile autobackup location. 
 
-..  code-block::
 
-    oraenv cfg
-    
-    sqlplus sys/password as sysdba
-    shutdown immediate
-    startup mount
-    
-If you have a large number of data files, then:
+DBID
+~~~~
 
-..  code-block::
-
-    alter system set open_cursors=1500 scope=memory;
-    
-Then exit from the database.
-
-In a DOS (shell) session:
-
-..  code-block::
-
-    nid target=sys/password dbname=azstg02 setname=y logfile=nid_azstg02.log
-    
-The database will be left closed when the above command completes. You *must* check the logfile.
-
-Post Rename Configuration
-=========================
-
-Once the database has been renamed, there's a little more work to do.
-
-Create a New Password File
---------------------------
-
-In ``%ORACLE_HOME%\database`` copy, or rename, the password file to suit the new staging database name. If there is no current password file, then create a new one:
+The ``DBID`` is obtained from the top of the ``RMAN`` log, or from the prompts when you connect to the database with ``RMAN``:
 
 ..  code-block:: none
 
-    cd %oracle_home%\database
-    orapwd file=pwdAZSTG02.ora password=<SysPassword> entries=10
+    connected to target database: CFG (DBID=2092933938)
 
-Create a New Spfile
+    
+Archived Log Sequence
+~~~~~~~~~~~~~~~~~~~~~
+
+The archive sequence is the highest one in the ``RMAN`` log. It appears near the end, just above the details of the controlfile and spfile autobackup:
+
+..  code-block:: none
+
+    ...
+    input archived log thread=1 sequence=73 RECID=73 STAMP=928589967
+    
+    Starting Control File and SPFILE Autobackup at 2016/11/22 13:39:54
+    piece 
+    ...
+
+**Note:** The sequence number you note down will be incremented by 1 later, in order to ensure that the one you noted will be restored and recovered by ``RMAN``. Normally ``RMAN`` stops applying logs when it reaches the requested log sequence, but does not apply it. Beware of this.
+
+
+Spfile and Controlfile Autobackup
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The controlfile and Spfile backups are taken at the end of every ``RMAN`` backup, no matter what else was backed up. You can never have too many backups of these files. Close to the end of the ``RMAN`` log, you will find the required details:
+    
+..  code-block:: none
+
+    Starting Control File and SPFILE Autobackup at 2016/11/22 13:39:54
+    piece handle=\\BACKMAN01\RMANBACKUP\BACKUPS\CFG\AUTOBACKUP\C-2092933938-20161122-01 comment=NONE
+    Finished Control File and SPFILE Autobackup at 2016/11/22 13:40:12
+
+The filename mentioned will have copies of both the spfile and the controlfiles, and we will definitely require all of those on the destination server.
+
+The filename contains the dbid and the data and time of the backup within its name too, if you look closely!
+
+
+Create Oracle Service
+---------------------
+
+Normally, to avoid wasting resources on the server, the service for the ``CFG`` database, on the server we are restoring to, usually a preproduction server, has been cleaned up after the most recent restore exercise. To this end, we must recreate the service.
+
+..  code-block:: none
+
+    oradim -new -sid cfg -startmode manual -shutmode abort
+
+This will create a new service and start it up. We will have to manually start the database ourselves, but this is as desired.
+    
+
+Check & Edit Tnsnames.ora
+-------------------------
+
+On the restoring server, we do not want connections to ``CFG`` to go to the *production* database, so we must comment out, for now, the appropriate entry.
+
+Edit the tnsnames.ora file and locate the entry for ``CFG`` - this is not the same as ``CFGSRV``, leave that one alone. Comment out the entry as follows:
+
+..  code-block:: none
+
+    #CFG =
+    #  (DESCRIPTION =
+    #    (ADDRESS = (PROTOCOL = TCP)(HOST = uvorc01.casfs.co.uk)(PORT = 1521))
+    #    (CONNECT_DATA =
+    #      (SERVER = DEDICATED)
+    #      (SERVICE_NAME = CFG)
+    #    )
+    #  )
+    
+Save the file and exit.
+
+Test that all is well by running the following command:
+
+..  code-block:: none
+
+    tnsping cfg
+
+You should not see a valid connection going to server ``uvorc01`` on port 1521, you should see something resembling the following instead:
+
+..  code-block:: none
+
+    ...
+    TNS-03505: Failed to resolve name
+       
+    
+Restore the Spfile
+------------------
+
+Nomount the database instance and restore the spfile as a pfile, as follows:
+
+..  code-block:: none
+
+    oraenv cfg
+    cd %oracle_home%\database
+
+Create, or edit, the file initCFG.ora and ensure that the entire contents match this:
+
+..  code-block:: none
+
+    db_name=cfg
+
+Save the file and exit the editor.
+
+Login to ``RMAN`` and start the instance in nomount mode:
+
+..  code-block:: sql
+
+    rman target sys/password nocatalog
+    startup nomount pfile='?\database\initCFG.ora'
+    
+When the instance starts, restore the spfile as a text based pfile, as follows:
+
+..  code-block:: none
+
+    set dbid 2092933938;
+    restore spfile to pfile '?\database\initCFG.ora' from 
+    '\\BACKMAN01\RMANBACKUP\BACKUPS\CFG\AUTOBACKUP\C-2092933938-20161122-01';
+    
+Obviously the filename will be as you noted from the backup log.    
+
+
+Edit the Parameters
 -------------------
 
-If no spfile exists for the new staging database, then create one in the normal manner, based on the ``CFG`` spfile:
+The restored parameter file references a number of parameters that are specific to the ``CFG`` database in production, sets up Data Guard requirements and so on. These need to be changed or removed/disabled to suit the restored ``CFG`` database.
 
-..  code-block:: sql
-
-    create pfile='?\database\initAZSTG02.ora'
-    from spfile '?\database\spfileCFG.ora' ;
+Always Edit the Following
+~~~~~~~~~~~~~~~~~~~~~~~~~
     
-    host "notepad %oracle_home%\database\initAZSTG02.ora" ;
-        
-You will need to change the ``db_name`` parameter, at the very least, to reference ``AZSTG02`` rather than ``CFG``. Any other parameters will need similar adjusting where they currently contain ``CFG`` in their value.
+Open the file ``%oracle_home%\database\initCFG.ora`` and edit the following, *non-exclusive* list of parameters:
 
-Once complete, save the file and exit from notepad, back into SQL*Plus. Then:
+- Anything that *does not* begin with an asterisk ('*') should be deleted;
+- Make sure that the CONTROL_FILES setting is correct for this new database. There should be one in ORADATA and one in the FRA. Make sure that the names specify the disc drives for the staging database (which are usually ``G:\`` and ``H:\``) and that the folder names reflects that of the staging database, not ``CFG``.
+- Delete DB_FILE_NAME_CONVERT if present.
+- Make sure that the DB_RECOVERY_FILE_DEST setting is correct for this new database.
+- Ensure DG_BROKER_START is set to FALSE.
+- Delete FAL_SERVER and FAL_CLIENT if present.
+- Delete LOCAL_LISTENER if present.
+- Delete LOG_ARCHIVE_CONFIG if present.
+- Delete LOG_ARCHIVE_DEST_2 upwards. Keep only dest 1.
+- Delete LOG_ARCHIVE_DEST_STATE_2 upwards. Keep only state 1.
+- Delete LOG_FILE_NAME_CONVERT if present.
+- Set PGA_AGGREGATE_TARGET to 100m.
+- Delete REMOTE_LISTENER if present.
+- Set SGA_TARGET to 2g. (Or adjust as appropriate for the database.)
+- Set SGA_MAX_SIZE to 3g. (Or adjust as appropriate for the database.)
 
-..  code-block:: sql
+If the Source Database was Data Guarded
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Additionally, if the restore is taken from a Data Guarded database, and ``CFG`` is usually Data Guarded, remove anything to do with the standby. Should have been done above, but check:
+
+- Ensure DG_BROKER_START is set to FALSE.
+- Delete LOG_ARCHIVE_CONFIG if present.
+
+
+If the Source Database was RAC Clustered
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This section can be ignored, we do not use RAC clustered databases as yet.
+
+If the restore is taken from an RAC database, then ensure that all RAC specific parameters are removed:
+
+- Delete CLUSTER_DATABASE.
+- Delete INSTANCE_NAME.
+- Delete INSTANCE_NUMBER.
+
+
+Edit to Suit the Staging Database
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Locate all parameters that reference ``CFG`` and replace ``CFG`` with the name of the staging database that we are restoring. However, **do not** change the ``db_name`` parameter, it must continue to reference ``CFG``.
+
+Save the file and exit from the editor.
+
+
+Restore the Control Files
+-------------------------
+
+Log back into ``RMAN``, restart the database using the new pfile and restore the control files:
+
+..  code-block:: none
+
+    startup force nomount pfile='?\database\initCFG.ora';
+
+    set dbid 2092933938;
+    restore controlfile from 
+    '\\BACKMAN01\RMANBACKUP\BACKUPS\CFG\AUTOBACKUP\C-2092933938-20161122-01';
+    
+Obviously the filename will be as you noted from the backup log and will be the same as for the spfile restore above. 
+
+
+Restore & Recover the Database
+------------------------------
+
+..  code-block:: none
+
+    startup force mount pfile='?\database\initCFG.ora';
+
+Because we are running a restore and recover, there is an unfortunate problem, the various ``_FILE_NAME_CONVERT`` parameters *do not work*, so we have to do things manually. 
+
+Additionally, the TEMP tablespace's files do not get renamed by default. We need to do that manually as well. 
+
+Currently, the production database has two files in the TEMP tablespace, however, it may be best to check this by running  the following script against the *production* ``CFG`` database:
+
+..  code-block:: none
+
+    select file_id
+    from dba_temp_files
+    order by 1;
+    
+Whatever numbers you get out are the ones we need to rename in the following script.    
+
+Create the following file in an editor and note that the value for 'nnnn' below is one higher than the sequence number you noted fown from the backup log.
+
+..  code-block:: none
+
+    run {
+    	allocate channel d1
+        device type DISK;
+
+    	allocate channel d2
+        device type DISK;
+
+    	allocate channel d3
+        device type DISK;
+
+    	allocate channel d4
+        device type DISK;
+
+    	allocate channel d5
+        device type DISK;
+
+    	allocate channel d6
+        device type DISK;
+
+        #----------------------------------------------------------------
+        # 'nnnn' in the following must be one more than the sequence that
+        # you noted down from the production ``CFG`` backup log.
+        #----------------------------------------------------------------
+        set until sequence nnnn;
        
-    create spfile '?\database\spfileAZSTG02.ora' 
-    from pfile '?\database\initAZSTG02.ora';
-    
-    shutdown immediate
-    startup mount
-    
+        #----------------------------------------------------------------
+        # Fix the database name, and check the drive letter here...
+        #----------------------------------------------------------------
+        set newname for database to 'G:\mnt\oradata\AZSTGnn\%b';
         
-You *may* get told that the database name in the controlfile is still the old one, especially if you *copied* the ``CFG`` spfile to the ``AZSTG02`` spfile, rather than creating a new one. This is easily fixed, however:
+        #----------------------------------------------------------------
+        # Add a line for each of the temp files in the source database
+        # the fix the database name, and check the drive letter here too.
+        #----------------------------------------------------------------
+        set newname for tempfile 1 to 'G:\mnt\oradata\AZSTGnn\%b';
+        set newname for tempfile 2 to 'G:\mnt\oradata\AZSTGnn\%b';
+
+        restore database;
+        switch datafile all;
+        switch tempfile all;
+        recover database; 
+
+        release channel d6;
+        release channel d5;
+        release channel d4;
+        release channel d3;
+        release channel d2;
+        release channel d1;
+    }
+    
+Save the file as something like ``restore_cfg.rman`` and execute it in ``RMAN``:
+
+..  code-block:: none
+
+    @restore_cfg.rman
+    
+You may need to add in the full path to the file, depending on where you saved it.    
+    
+When completed, the database will be restored and recovered, but not yet open, it remains mounted.
+    
+    **Note**: Because the TEMP files are never backed up, they cannot be restored. What will happen is that they will be recreated when you open the database.
+
+At the end of the recovery phase, you should see a message showing that your chosen sequence of archived log was applied to the database. 
+
+The database has all it's files in the locations required by the staging database, but is still named ``CFG``. Before we rename it, we need to do a little housekeeping.
+
+You should now exit from RMAN. The remainder of the work needs to be done in ``SQL*Plus``.
+
+We need a script to create a rename script for the redo logs. Open an editor and save the following as ``create_rename_redo.sql``:
 
 ..  code-block:: sql
 
-    alter system set db_name='AZSTG02' scope=spfile;
-    
-    shutdown immediate
-    startup mount
+    set lines 2000 pages 2000 trimspool on
+    set echo off feed off verify off head off
 
-    **Warning**\: you should also check for other parameters that reference ``CFG`` if you did copy the spfile. These will need correcting too.
+    spool rename_logs.sql
     
+    -- Script to rename REDO logs using SQL*Plus...
+    -- Note: REPLACE() is case sensitive. Use correct locations!
+    --       AND use UPPERCASE for drive letters and DB Names!
+    --
+    -- Change the following to suit your source and destination drives.
+    -- LOG_A_DRIVE is the drive where CFG REDOnA logs live. Usually ORADATA drive.
+    -- LOG_B_DRIVE is the drive where CFG REDOnB logs live. Usually FRA drive.
+    -- Currently, these are E and F drives.
+    define LOG_A_DRIVE=E
+    define LOG_B_DRIVE=F
+
+    -- LOG_A_DEST is where the AZSTGnn REDOnA logs will be after the restore.
+    -- LOG_B_DEST is where the AZSTGnn REDOnB logs will be after the restore.
+    -- Currently, these are G and H drives.
+    define LOG_A_DEST=G
+    define LOG_B_DEST=H
+    
+    -- DEST_DB is AZSTG01 or AZSTG02 as appropriate.
+    define DEST_DB=AZSTGnn
+
+    select 'alter database rename file '''|| member || ''' to ''' ||
+            replace(
+                replace(
+                    replace(upper(member),
+                           '&LOG_A_DRIVE:','&LOG_A_DEST:'),
+                    '&LOG_B_DRIVE:','&LOG_B_DEST:'), 
+                '\CFG\', '\' || '&DEST_DB' || '\'
+            ) || ''';'
+    from v$logfile
+    order by 1;
+    
+    spool off
+    
+Save the file and exit. The settings for the source and destination drives should be correct, however, it is best to check. You will need to set the correct value for the staging database being restored. Log in to the database using ``SQL*Plus`` as the SYSDBA user and:
+
+..  code-block:: sql
+
+    -- Create a script to rename the redo logs.
+    @create_rename_redo.sql
+    
+    
+    -- AFTER checking that it is ok, execute the generated script.
+    @rename_logs.sql    
+    
+    
+    -- Rename the redo logs.
+    @rename_logs.sql
+    
+    
+    -- Always do this. The CFG filename is still in use.
+    alter database disable block change tracking;
+    
+    -- Do the following always after a SET UNTIL ... restore and recover.
+    alter database open resetlogs;
+    
+You might see the following error, or one very similar:
+
+..  code-block:: none
+
+    alter database open resetlogs
+    *
+    ERROR at line 1:
+    ORA-00392: log 9 of thread 1 is being cleared, operation not allowed
+    ORA-00312: online log 9 thread 1: 'G:\MNT\ORADATA\AZSTG02\REDO9A.LOG'
+    ORA-00312: online log 9 thread 1:
+    'H:\MNT\FAST_RECOVERY_AREA\AZSTG02\REDO9B.LOG'
+
+As the log files don't actually exist yet, we can safely clear them out, which simply initialises them, which is what we are trying to do anyway! First we need to determine which logfile group the logfile belongs to:
+
+..  code-block:: sql
+
+    select group# from v$logfile 
+    where member = 'H:\MNT\FAST_RECOVERY_AREA\AZSTG02\REDO9B.LOG';
+
+        GROUP#
+    ----------
+             9
+
+And once we know the group, we can clear it and open the database:
+
+..  code-block:: sql
+
+    alter database clear logfile group 9;
+    Database altered.
+
+    alter database open resetlogs;
+    Database altered.    
+    
+
 Post Restore Clean Up
 =====================
 
-The database has now been restored, and should now be named ``AZSTG02`` - for this exercise. However, there are still services etc which exist purely for Data Guard, and for the production database, and these need to be removed.
-
+The following housekeeping requires attention before the database can be renamed.
 
 Production Service & Trigger
 ----------------------------
@@ -222,7 +554,9 @@ If the result shows 'disabled' then we need to enable it:
     alter database enable block change tracking
     using file 'H:\mnt\fast_recovery_area\AZSTG02\bct.dbf';
 
-Obviously, replace 'H' with the correct drive letter for the FRA disc. Some other parameters might also need to be changed from their ``CFG`` values:
+Obviously, replace 'H' with the correct drive letter for the FRA disc, and set the database name correctly. 
+
+Some other parameters might also need to be changed from their ``CFG`` values:
 
 ..  code-block:: sql
 
@@ -280,29 +614,155 @@ The results will be similar, not necessarily identical, to the following:
     PERFSTAT                       TRUE  SNAPSHOT_EVERY_15MINS
 
 
-For all non-production databases, there should be no jobs owned by FCS in the listing. If there are, they must be disabled:
+If there are any jobs listed, they must be disabled:
 
 ..  code-block:: sql
 
     begin
-        dbms_scheduler.disable(name => 'FCS.ALERTS_HEARTBEAT');
-        dbms_scheduler.disable(name => 'FCS.CLEARLOGS');
-        dbms_scheduler.disable(name => 'FCS.JISA_18BDAY_CONVERSION');
+        dbms_scheduler.disable(name => 'FCS.ALERTS_HEARTBEAT', 
+                               force => true);
+        dbms_scheduler.disable(name => 'FCS.CLEARLOGS',
+                               force => true);
+        dbms_scheduler.disable(name => 'FCS.JISA_18BDAY_CONVERSION',
+                               force => true);
+        dbms_scheduler.disable(name => 'PERFSTAT.PURGE_DAILY',
+                               force => true);
+        dbms_scheduler.disable(name => 'PERFSTAT.SNAPSHOT_EVERY_15MINS',
+                               force => true);
     end;
 
-Check also that there are no PERFSTAT jobs active. If there are, the solution is a little more drastic:
+PERFSTAT is not required on the staging databases:
 
 ..  code-block:: sql
 
     drop user perfstat cascade;
 
-We tend to only be interested in PERFSTAT on production databases.
+If there is an error that *you cannot drop a user that is connected* then the above running job(s) for PERFSTAT are still running in the background. The database should be restarted.
 
+..  code-block:: sql
+
+    shutdown abort;
+    startup 
+    drop user perfstat cascade;
+
+
+Change Passwords
+----------------
+
+Certain users will require to have their password changed as they now reflect production. At the *very least* you must change the FCS password to that found in ``Keepass`` for the staging database. In addition, change any other passwords found for the staging database in ``Keepass`` to suit.
+
+..  code-block:: sql
+
+    alter user FCS identified by <kepass_password>;
+    
+
+
+Rename the Database Using 'Nid'
+===============================
+
+If you did not rename the database as part of the restore, then you must do it now.
+
+The database will be renamed using the ``nid`` utility as it currently has the same ``DBID`` as the database it was restored from, ``CFG``, and if you attempt to back it up, you may corrupt the backup details for the CFG database, in the ``RMAN`` catalogue.
+
+..  code-block:: none
+
+    oraenv cfg
+    
+    sqlplus sys/password as sysdba
+    shutdown immediate
+    startup mount
+    
+If you have a large number of data files, then:
+
+..  code-block:: sql
+
+    alter system set open_cursors=1500 scope=memory;
+    
+Then exit from the database.
+
+In a DOS (shell) session:
+
+..  code-block:: none
+
+    nid target=sys/password logfile=nid_azstg02.log
+    
+The *database will be left closed* when the above command completes. You *must* check the logfile.
+
+If you see an error similar to the following, when you check the log file:
+
+..  code-block:: none
+
+    NID-00135: There are 1 active threads
+
+Then the database has not been renamed and is still mounted. The usual cause is a background scheduled job running - you did drop all the scheduled jobs for FCS and PERFSTAT didn't you - or, the database was not shut down cleanly and has some instance recovery to carry out before ``nid`` will work.   
+
+
+
+Post Rename Configuration
+=========================
+
+Create a New Password File
+--------------------------
+
+In ``%ORACLE_HOME%\database`` copy, or rename, the password file to suit the new staging database name. If an existing password file for the staging database exists, then *unless* you have changed the SYS password, it can continue to be used. If, on the other hand it doesn't exist, then rename the one for the CFG database to suit the staging database:
+
+..  code-block:: none
+
+    cd %oracle_home%\database
+    copy pwdCFG.ora pwdAZSTG02.ora
+
+If there is no existing ``pwdCFG.ora`` password file, then create a new one for the staging database:
+
+..  code-block:: none
+
+    cd %oracle_home%\database
+    orapwd file=pwdAZSTG02.ora password=<SysPassword> entries=10
+
+    
+Create a New Spfile
+-------------------
+
+Once the database has been renamed, there's a little more work to do. After the ``nid``, the database was left in a closed state. We *don't* need it running for the following commands.
+
+If no spfile exists for the new staging database, then create one in the normal manner, based on the ``CFG`` pfile. We can edit the file we restored earlier to match the staging database.
+
+..  code-block:: none
+
+    cd %oracle_home%\database
+    copy initCFG.ora initAZSTGnn.ora
+    
+Now, edit the ``initAZSTGnn.ora`` file and change the ``db_name`` parameter from ``CFG`` to `AZSTGnn`` according to the database you are building.
+   
+Once complete, save the file and exit from the editor, then you must change the Oracle environment from ``CFG`` to ``AZSTG02`` - in this example.:
+
+..  code-block:: sql
+       
+    oraenv azstg02
+    
+You have to change the environment to avoid errors when you start the database. If Oracle tells you that *the name of the database 'CFG' is not the same as in the control file 'AZSTG02'* then you forgot!
+
+Use the Windows ``Services`` application to restart the ``OracleServiceAZSTG02`` service.
+    
+Log back into ``SQL*Plus`` as the SYSDBA user, and:
+
+..  code-block:: sql
+       
+    create spfile '?\database\spfileAZSTG02.ora' 
+    from pfile '?\database\initAZSTG02.ora';
+    
+    shutdown immediate
+    startup mount
+    
 
 Depersonalisation
 =================
 
 Regardless of the database being restored, we must ensure that, at least, a partial depersonalisation is performed. The code can be obtained from TFS, from *TA\\MAIN\\Source\\UKRegulated\\Database\\Depersonalisation\\Depers & Shrink*\ .
+
+- AZSTG01 is *normally* a partially depersonalised database.
+- AZSTG02 is normally a fully depersonalised database.
+
+Choose one of the following as appropriate, and note that while the depersonalisation is continuing, the 
 
 Partial Depersonalisation
 -------------------------
