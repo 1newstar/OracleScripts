@@ -95,6 +95,22 @@ command replacing "A_DB" as appropriate:
 
     oradim -new -sid A_DB -startmode manual -shutmode immediate
 
+In order that the database being cloned can be used with the ``oraenv`` command, the database name 
+and its ``%ORACLE_HOME%`` should now be added to the ``oraenv.txt`` file found in the ``c:\scripts`` 
+folder.
+
+..  code-block:: none
+
+    ...
+    A_DB | c:\OracleDatabase\product\11.2.0\dbhome_1
+    ...
+    
+The Oracle Home path name should obviously be adjusted as appropriate for the new "A_DB" database.
+
+This is required because there are now, potentially, more than one Oracle Home permitted - 
+RDBMS and Agent for example - so the new ``oraenv`` system needs to know which 
+databases use which path.    
+    
 Create the folder structure required by the new database. For
 example, run the following in a cmd session to easily create the full
 paths:
