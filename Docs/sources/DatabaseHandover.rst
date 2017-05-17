@@ -111,7 +111,7 @@ Setting Oracle Environment
 Oraenv
 ------
 
-Windows has no concept of the ``oraenv`` utility, so we have to do it manually. (See below for a script.)
+Windows has no concept of the ``oraenv`` utility, so we have to do it manually. (See below for a useful script that pretty much emulates ``oraenv`` as found on Unix systems.)
 
 .. code-block:: batch
 
@@ -161,22 +161,31 @@ For example:
 
     oraenv ppdcfg
 
-This will set the required environment. Note that ``NLS_DATE_FORMAT`` will be set by this script. If you are importing, best redefine it as above.
+This will set the required environment. Note that ``NLS_DATE_FORMAT`` will be set by this script. If you are importing into a UV database, best redefine it as above. There's a DATE column which has a default value defined as a VARCHAR2, and the format of that is incompatible with 'dd/mm/yy hh24:mi:ss'. They should have used a TO_DATE(), but sadly, didn't.
 
-.. code-block:: batch
+The ``oraenv.cmd`` is dependent on some helper programs:
 
-    @echo off
-    set ORACLE_HOME=C:\OracleDatabase\product\11.2.0\dbhome_1
-    set ORACLE_SID=%1
-    set NLS_DATE_FORMAT=yyyy/mm/dd hh24:mi:ss
-    set nls_lang=AMERICAN_AMERICA.WE8ISO8859P1
+-   DBHome.exe - Extracts the ``%ORACLE_HOME%`` for the supplied %ORACLE_SID% from the ``oratab`` file.
+-   DBPath.exe - Removes the existing ``%ORACLE_HOME%\*`` folders from ``%PATH%`` prior to adding the new ``%ORACLE_HOME%\bin`` folder to the path - if the ``%ORACLE_HOME%`` has changed.
+-   TidyPath.exe - Required as defining ``%PATH%`` in Control Panel, as opposed to on the command line, allows folder paths which have spaces or other special characters, to be defined without double quotes. This fails when setting ``%PATH%`` in a batch file! This utility makes sure that all paths that need to be, are quoted correctly.
 
-    @echo Environment set as follows:
-    @set ORACLE_HOME
-    @set ORACLE_SID
-    @set NLS_DATE_FORMAT
-    @set nls_lang
+And also on an ``oratab`` file, looked for in the following locations, in order of preference:
 
+-   ``%ORATAB%`` - the full path and filename of the file to be used.
+-   ``%ORACLE_BASE%\oratab.txt`` - If %ORACLE_BASE% is defined.
+-   ``c:\scripts\oratab.txt`` - in the same folder as the ``oraenv.cmd`` executable. This is the default at the time of writing. (Although I would prefer defining an ``%ORATAB%`` environment variable pointing to a separate location myself!)
+
+Running ``oraenv`` also looks for and uses the ``%ORAENV_ASK%`` environment variable, as follows:
+
+-   ``%ORAENV_ASK%`` = YES:
+
+    -   Will prompt for a valid ``%ORACLE_SID%`` if none supplied when calling ``oraenv``.
+    
+-   ``%ORAENV_ASK%`` = NO:
+
+    -   Will not prompt for a valid ``%ORACLE_SID%`` if none supplied when calling ``oraenv`` but will simply display the current oracle environment.
+    
+    
     
 OraRunning Script
 -----------------
@@ -257,6 +266,53 @@ Be aware, however, that just because a service is running, the database may stil
 And so on.
 
 
+MyPath Utility
+--------------
+
+Handy utility to display the current setting of ``%PATH%`` but with each separate folder path on a new line, this makes it far easier to read, and helps identify duplicates.
+
+..  code-block:: batch
+
+    mypath
+    
+This would result is something resembling the following:
+
+..  code-block:: none
+
+    C:\OracleDatabase\product\11.2.0\dbhome_1\bin;
+    C:\Windows\system32;
+    C:\Windows;
+    C:\Windows\System32\Wbem;
+    C:\Windows\System32\WindowsPowerShell\v1.0\;
+    c:\users\ndunbar\utilities;
+    c:\scripts;
+    c:\scripts\rman;
+
+
+HexDump Utility
+---------------    
+
+A somewhat useful utility to dump out a file in hex.
+
+..  code-block:: batch
+
+    hexdump file_name [start] [length]
+    
+-   Start defaults to 0 and means the beginning of the file.
+-   Length defaults to the full length of the file, or from start until the end.
+
+The outut format is quite simple:
+
+..  code-block:: none
+
+    000040  BA10000E 1FB409CD 21B8014C CD219090  ........!..L.!..
+    000050  54686973 2070726F 6772616D 206D7573  This program mus
+    000060  74206265 2072756E 20756E64 65722057  t be run under W
+    000070  696E3332 0D0A2437 00000000 00000000  in32..$7........
+
+And so on.
+
+    
 RMAN Backup Scripts
 -------------------
 
@@ -347,6 +403,13 @@ Pre-Production Databases
 -  PPDCFGSB - Standby pre-production database.
 -  PPDRMN - Primary pre-production RMAN catalog database.
 -  PPDRMNSB - Standby pre-production RMAN catalog database.
+
+DevOps Databases
+----------------
+
+-   AZSTG01 - Partially depersonalised staging database used to create further UAT etc databases where full depersonalisation is not able to be utilised. This is also used as a destination database when testing the RMAN backups of the production database for restorability.
+-   AZSTG01 - Fully depersonalised staging database used to create further DEV etc databases where access to personal data is not permitted.
+- CFGDEMO - Used by DevOps to test deployments.
 
 
 Startup/Shutdown
@@ -505,6 +568,10 @@ What is extremely annoying is the fact that any time the ``netca`` utility is us
 Data Guard Switchover/Failover
 ==============================
 
+    **WARNING**: There appears to be a bug in Data Guard at 11.2.0.4. When a primary database with ``LOG_ARCHIVE_DEST_2`` and ``LOG_ARCHIVE_DEST_3`` is switched over to a standby, the settings for ``LOG_ARCHIVE_DEST_3`` are lost. These need to be reset after each switch over.
+    
+    We have logged an SR with Oracle on this matter.
+
 Only the primary running database starts the appropriate service, the standby database(s) physically stop it. This is done by way of the following trigger, owned by SYS:
 
 .. code-block:: sql
@@ -560,17 +627,15 @@ RMAN
 Backup Drive
 ------------
 
-**Note:** Where the ``Z:\`` drive is mentioned below, this was correct at the time of writing, however, this remains subject to change.
+The ``\\BACKMAN01\RMANBACKUP\`` drive has been setup as the main RMAN backup device. This is currently 3TB in size, but this will need to be monitored as normal running starts to take place. Especially as the retention period for the production database has been set to 7 years and a day! (2558).
 
-The ``Z:\`` drive has been setup as the main RMAN backup device. This is currently 3TB in size, but this will need to be monitored as normal running starts to take place. Especially as the retention period for the production database has been set to 7 years and a day! (2558).
+This drive is *not visible* in Windows File Explorer except to the various service users, it will not appear in Windows File Explorer unless you are logged in as the appropriate service user.
 
-This drive is *not visible* in Windows File Explorer except to the various service users, it will not appear in Windows File Explorer unless you are logged in as the user.
-
-You can, however, map a network drive to ``Z:\`` in your own user. The full path is ``\\BACKMAN01\RMANBACKUP``. This allows you to read and write to the drive, assuming Windows permissions allow of course.
+You can, however, map a network drive to ``Z:\``, for example, in your own user. The full path is ``\\BACKMAN01\RMANBACKUP``. This allows you to read and write to the drive, assuming Windows permissions allow of course.
 
 RMAN *cannot* back up to the (mapped) ``Z:\`` drive for some reason. It can, however, backup to the full UNC path, so all format clauses in the RMAN backup scripts *must* use the full UNC path, rather than ``Z:\`` as the following example demonstrates:
 
-..  code-block:: 
+..  code-block:: none
 
     RMAN> backup format '\\backman01\RMANBackup\backups\cfgrmn\test_%U%T' spfile;
 
@@ -610,14 +675,14 @@ The following configuration has been set up so far, you may reconfigure as desir
 CFG
 ---
 
-.. code-block::
+.. code-block:: none
 
     RMAN configuration parameters for database with db_unique_name CFG are:
     CONFIGURE RETENTION POLICY TO REDUNDANCY 2558;
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
     CONFIGURE CONTROLFILE AUTOBACKUP FORMAT FOR DEVICE TYPE DISK TO     '\\backman01\RMANBackup\backups\cfg\autobackup\%F';
-    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
+    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
 
 **Note** the location of the autobackup of the controlfile is subject to change as and when the backup devices, aka the ``Z:\`` drive, are fully up and working.
 
@@ -625,51 +690,51 @@ CFG
 CFGAUDIT
 --------
 
-.. code-block::
+.. code-block:: none
 
     RMAN configuration parameters for database with db_unique_name CFGAUDIT are:
     CONFIGURE RETENTION POLICY TO REDUNDANCY 2558;
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
     CONFIGURE CONTROLFILE AUTOBACKUP FORMAT FOR DEVICE TYPE DISK TO '\\backman01\RMANBackup\backups\cfgaudit\autobackup\%F';
-    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
+    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
 
     
 CFGRMN
 ------
 
-.. code-block::
+.. code-block:: none
 
     RMAN configuration parameters for database with db_unique_name CFGRMN are:
     CONFIGURE RETENTION POLICY TO REDUNDANCY 31;
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
         CONFIGURE CONTROLFILE AUTOBACKUP FORMAT FOR DEVICE TYPE DISK TO '\\backman01\RMANBackup\backups\cfgrmn\autobackup\%F';
-CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
+CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
 
     
 PPDCFG
 ------
 
-.. code-block::
+.. code-block:: none
 
     RMAN configuration parameters for database with db_unique_name PPDCFG are:
     CONFIGURE RETENTION POLICY TO REDUNDANCY 10;
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
-    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
+    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
 
     
 PPDRMN
 ------
 
-.. code-block::
+.. code-block:: none
 
     RMAN configuration parameters for database with db_unique_name PPDRMN are:
     CONFIGURE RETENTION POLICY TO REDUNDANCY 10;
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
-    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
+    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
 
     
 Catalogs
@@ -684,22 +749,24 @@ There is an alias, as you will note from the above, ``RMANCATSRV``, on both prod
 
 Both databases have the same catalog username - ``rman11g`` and the password is currently ``rman11gcatalog`` but this could/should/will be changed after handover - and the various backup scripts amended to suit. 
 
-    **Note**\ :At present, there is also a separate ``RMAN`` catalog database on ``ORCDEVORC03``, named ``AZRMN01`` and this is only used for backups on the test/UAT servers, if applicable. 
+    **Note**\ :At present, there is also a separate ``RMAN`` catalog database on ``ORCDEVORC03``, named ``AZRMN01`` and this is only used for backups on the test/UAT servers, if applicable. This server is being decommissioned so this database may not exist when you read this document.
 
 
 Daily Backups
 -------------
 
-**Note**: Due to *foibles* in the way that the application needs certain settings within ``sqlnet.ora`` to be set, we must always login to the databases with a username and password. This includes running backups etc. To this end, the SYS password on the databases, if changed, must be reflected in the settings used to carry out a backup in the  Windows Task Scheduler.
+    **Note**: Due to *foibles* in the way that the application needs certain settings within ``sqlnet.ora`` to be set, we must always login to the databases with a username and password. This includes running backups etc. To this end, the SYS password on the databases, if changed, must be reflected in the settings used to carry out a backup in the  Windows Task Scheduler.
 
 Daily backups are configured to take place 7 days a week, with a level 0 incremental backup taking place on Sunday. Every other day of the week will carry out an incremental level 1 backup.
 
 This is slightly different from the old 9i regime where levels 2 through 4 existed in RMAN, but as these are no longer provided at 11g, the choice is level 0 or level 1 only.
 
+    **Beware**: The backup location is always to the supplied path with the oracle sid for the database being used in the path:  ``\\BACKMAN01\RMANBackup\backups\%ORACLE_SID%`` - this means that if we backup the standby database, the files will be written to the ``xxxSB`` folder as opposed to `xxx` according to the database name.
+
 Craig has a diagram of the RMAN backup environment, but in summary:
 
 -  RMAN backs up the database to a specific drive. This is mapped on all
-   servers as the same disk, ``\\backman01\rmanbackups\``, but only within 
+   servers as the same disk, ``\\BACKMAN01\RMANBackup\``, but only within 
    the service user's account by
    default, so there's no problem if we switch from backing up the
    primary to backing up the standby, or the DR databases.
@@ -757,7 +824,7 @@ Windows scheduler tasks exist to carry out the following schedule.
 Pre-Production Schedule
 -----------------------
 
-Currently, the pre-production databases are not actually backed up. However, the following scheduled tasks have been set up using the Windows scheduler, they just have not been enabled.
+Currently, the pre-production databases are not actually backed up daily. However, the following scheduled tasks have been set up using the Windows scheduler, but only the Sunday level 0 incremental backups have been enabled. The preproduction environment therefore only carries out a weekly backup.
 
 **PPDCFG**
 
