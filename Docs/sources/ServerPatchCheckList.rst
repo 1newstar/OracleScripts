@@ -16,16 +16,29 @@ Assumptions
 +-------------------------+---------------------------+-------------+
 
 
+Server Preparation
+==================
+
+-   All RMAN backup jobs should be running on the primary server. If the patching will result in a change to the primary server, then the backup tasks must be disabled in Windows Task Scheduler on the current primary server, and enabled on the server that will become the primary server.
+
+-   Beware if you have added new SYSDBA enabled users to the running primary. These will be replicated to the standby databases, however, unless you also have copied the primary password file to the standby servers, and renamed it to suit the applicable standby database, then these SYSDBA users will not be usable.
+
+
 Patch SB server - UVORC02
 =========================
 
 It is assumed that DGMGRL checks will be carried out here to ensure that standby databases are up to date with no gaps.
 
--   Go to CFG/CFGAUDIT/CFGRMN and:
+-   Go to CFG/CFGAUDIT/CFGRMN and login to ``dgmgrl`` as the sys user, with a password, then:
 
-    ..  code-block:: sql
+    ..  code-block:: none
     
-        alter system set log_archive_dest_state_2=DEFER scope=both;
+        show configuration
+        disable database <whatever>
+        
+    This will stop the primary database from sending and applying logs on the named standby. 
+    
+        **NOTE**: You need to check the configuration first. If the database names are in UPPER CASE, then they must be typed in upper case with surrounding double quotes. If they are listed in lower case, then they must be typed in lower case.
         
 -   Go to CFGSB/CFGAUDSB/CFGRMNSB and:
 
@@ -40,21 +53,31 @@ It is assumed that DGMGRL checks will be carried out here to ensure that standby
     
         startup mount
         
--   Go to CFG/CFGAUDIT/CFGRMN and:
+-   Go to CFG/CFGAUDIT/CFGRMN  login to ``dgmgrl`` as the sys user, with a password, then:
 
-    ..  code-block:: sql
+    ..  code-block:: none
     
-        alter system set log_archive_dest_state_2=ENABLE scope=both;
+        show configuration
+        enable database <whatever>
+        
+    This will stop the primary database from sending and applying logs on the named standby. 
+    
+        **NOTE**: You need to check the configuration first. If the database names are in UPPER CASE, then they must be typed in upper case with surrounding double quotes. If they are listed in lower case, then they must be typed in lower case.
         
 
 Patch the DR Server - DRUVORC03
 ===============================
 
--   Go to CFG/CFGAUDIT/CFGRMN and:
+-   Go to CFG/CFGAUDIT/CFGRMN  login to ``dgmgrl`` as the sys user, with a password, then:
 
-    ..  code-block:: sql
+    ..  code-block:: none
     
-       alter system set log_archive_dest_state_3=DEFER scope=both;
+        show configuration
+        disable database <whatever>
+        
+    This will stop the primary database from sending and applying logs on the named standby. 
+    
+        **NOTE**: You need to check the configuration first. If the database names are in UPPER CASE, then they must be typed in upper case with surrounding double quotes. If they are listed in lower case, then they must be typed in lower case.
         
 -   Go to CFGDR/CFGAUDDR/CFGRMNDR and:
 
@@ -69,11 +92,16 @@ Patch the DR Server - DRUVORC03
     
         startup mount
 
--   Go to CFG/CFGAUDIT/CFGRMN and:
+-   Go to CFG/CFGAUDIT/CFGRMN  login to ``dgmgrl`` as the sys user, with a password, then:
 
-    ..  code-block:: sql
+    ..  code-block:: none
     
-        alter system set log_archive_dest_state_3=ENABLE scope=both;
+        show configuration
+        enable database <whatever>
+        
+    This will stop the primary database from sending and applying logs on the named standby. 
+    
+        **NOTE**: You need to check the configuration first. If the database names are in UPPER CASE, then they must be typed in upper case with surrounding double quotes. If they are listed in lower case, then they must be typed in lower case.
         
 
 Patch the Primary Server - UVORC01
@@ -89,13 +117,20 @@ At this point, both standby servers have been patched and all standby databases 
      
     Replacing "XXX" with the appropriate standby database name.
 
+        **NOTE**: You need to check the configuration first. If the database names are in UPPER CASE, then they must be typed in upper case with surrounding double quotes. If they are listed in lower case, then they must be typed in lower case.
+
 At this point we are now running  the various "SB" databases as primary, the various "DR" databases are still DR standby databases, and the previously running primary databases are now running as standby databases. We can now patch what was the previous primary server.
 
--   Go to CFGSB/CFGAUDSB/CFGRMNSB and:
+-   Go to CFGSB/CFGAUDSB/CFGRMNSB  login to ``dgmgrl`` as the sys user, with a password, then:
 
-    ..  code-block:: sql
+    ..  code-block:: none
     
-        alter system set log_archive_dest_state_2=DEFER scope=both;
+        show configuration
+        disable database <whatever>
+        
+    This will stop the primary database from sending and applying logs on the named standby. 
+    
+        **NOTE**: You need to check the configuration first. If the database names are in UPPER CASE, then they must be typed in upper case with surrounding double quotes. If they are listed in lower case, then they must be typed in lower case.
         
 -   Go to CFG/CFGAUDIT/CFGRMN and:
 
@@ -110,11 +145,16 @@ At this point we are now running  the various "SB" databases as primary, the var
     
         startup mount
         
--   Go to CFGSB/CFGAUDSB/CFGRMNSB and:
+-   Go to CFGSB/CFGAUDSB/CFGRMNSB  login to ``dgmgrl`` as the sys user, with a password, then:
 
-    ..  code-block:: sql
+    ..  code-block:: none
     
-        alter system set log_archive_dest_state_2=ENABLE scope=both;
+        show configuration
+        enable database <whatever>
+        
+    This will stop the primary database from sending and applying logs on the named standby. 
+    
+        **NOTE**: You need to check the configuration first. If the database names are in UPPER CASE, then they must be typed in upper case with surrounding double quotes. If they are listed in lower case, then they must be typed in lower case.
         
 
 At this point we are running the old primary databases as a standby, the old DR servers are still running as a DR standby, but the old standby databases are now the current primary databases.
@@ -125,6 +165,6 @@ Restart The Various Services
 
 Mark Phillips can now be utilised to restart all known services and ensure that they correctly connect to the now running primary databases, the ones with "SB" at the end of their names. 
 
-    **Note**\ : This was a bad choice of naming standards. Norman should be slapped with a shovel for thinking that one up! :-)
+    **Note**\ : This was a bad choice of naming standards.
     
 It is assumed that DGMGRL checks will be carried out once more to ensure that all databases are up to date with no gaps.
