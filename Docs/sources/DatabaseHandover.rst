@@ -1184,7 +1184,7 @@ In the pop-up that appears, go to the ``Threads`` tab. Click OK if you get a pop
 you that something isn't as fully featured as it might need to be. Now:
 
 - Click the ``TID`` column, to sort by thread id. You might need to do this twice to get the list in the order that you want. 
-- Scroll down till you kind the thread with the id identified by the SQL statement above.
+- Scroll down till you find the thread with the id identified by the SQL statement above.
 - Click the thread to select it.
 - Click the ``Kill`` button. The thread should vanish from the list.
 
@@ -1196,6 +1196,54 @@ That's the server process killed. The user process will still exist, possibly, i
 
 If the database session does not vanish, even after a while, it could be a runaway session. We have seen these on 9i production and on 
 11g production. The only solution is to bounce the database in this case, especially if the session is burning CPU etc.
+
+
+Finding Rogue Database Sessions
+===============================
+
+It is possible that a rogue, or otherwise, session in the database can kill performance. How to determine the culprit? This is after you have determined that the problem isn't with locking of course.
+
+-   On the database server, open Task Manager.
+-   On the performance tab, click to open the Resource Monitor.
+-   Go to the Overview tab, and look at the "mini indicators" to see if the problem is CPU, Memory, Disc or Network - look for high percentages or similar. CPU is easiest to track down - information regarding the others is harder to come by.
+-   Click the appropriate tab, depending on the problem, and ensure that the Processes list is at the top.
+-   Sort the list by the appropriate column. ``Oracle.exe`` will no doubt appear at the top. Note the ``PID`` column for that process.
+
+The ``oracle.exe`` process is the main database process, and all Windows connections are done via threads of this process. To get a database SID from a thread involves a little more work. Performance Monitor is no longer of any use. Move on ...
+
+    **Note**: You *can* miss out the above if you open process explorer first. The mini performance graphs at the top of the screen will highlight the top user of the particular resource being graphed. That will give you the ``oracle.exe`` process name and its ``PID`` for the highest user of the particular resource.
+
+Open ``c:\scripts\ProcessExplorer``, on the database server, in file explorer and you will find a file named ``procexp64.exe`` which you should run as administrator. (Right-click, run as administrator).
+
+Once running:
+
+-   Select view->show Process Tree, if necessary.
+-   Select view->update speed and set it to 5 seconds, or longer, otherwise it refreshes too quickly and makes finding things difficult.
+-   Click on the ``process`` header in the tree that appears. You are sorting by the process name.
+-   Scroll down to the ``oracle.exe`` entries. There will be one for each database running on the server.
+-   Find the correct ``oracle.exe`` for the problem PID that you noted above.
+-   Double-click the correct ``oracle.exe`` process name.
+
+In the pop-up that appears, go to the ``Threads`` tab. Click OK if you get a pop-up telling
+you that something isn't as fully featured as it might need to be.
+
+-   Click the ``CPU`` column, to sort by thread id. You might need to do this twice to get the list in the order that you want - highest at the top. This assumes the problem in CPU of course. Sadly, for Disk and Network problems, there's not much other useful information to be gained. It may take a few seconds for the list to refresh.
+-   Note the ``TID`` of the thread with the highest CPU usage. However, watch for a few refreshes to see if it is the only one, or if others are also affecting performance. Note the ``TID``s for all, if necessary.
+
+Now you have the thread IDs for the affecting sessions, we need to use Toad or SQL*Plus to find the culprits in the database.
+
+-   In the editor, run the following query:
+
+    ..  code-block:: sql
+    
+        select  p.spid as TID, s.sid
+        from    v$session s, v$process p
+        where   s.paddr = p.addr
+        and     s.paddr in (select  addr
+                            from    v$process
+                            where   spid in (3476,6564));
+
+The list of threads and SIDs will identify the sessions you are interested in within the database.
 
 
 Old DBMS_JOBS
