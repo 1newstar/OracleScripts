@@ -578,8 +578,16 @@ Some other parameters might also need to be changed from their ``CFG`` values:
 
     alter system set dispatchers=
     '(PROTOCOL=TCP) (SERVICE=azstg02XDB)' scope=spfile;
+    
+    alter system set fal_server='' scope=both;
+    
+    alter system set log_archive_config='' scope=both;
+    
+    alter system set log_archive_dest_2 = '' scope=both;
+    
+    alter system set log_archive_dest_3 = '' scope=both;
 
-If you make any changes then restart the database:
+If you had to make any changes with ``scope=spfile``, then restart the database:
 
 ..  code-block:: sql
        
@@ -630,6 +638,7 @@ If there are any jobs listed, they must be disabled:
         dbms_scheduler.disable(name => 'PERFSTAT.SNAPSHOT_EVERY_15MINS',
                                force => true);
     end;
+    /
 
 PERFSTAT is not required on the staging databases:
 
@@ -654,9 +663,20 @@ Certain users will require to have their password changed as they now reflect pr
 ..  code-block:: sql
 
     alter user FCS identified by <kepass_password>;
+
     
+Drop Database Links
+-------------------
 
+We do not want, or need the production database links in a staging database used to refresh other databases, so:
 
+..  code-block:: sql
+
+    drop public database link CFGTRAIN_LINK;
+    drop public database link CFGSB_LINK;
+    drop public database link CFGAUDIT_LINK;
+
+    
 Rename the Database Using 'Nid'
 ===============================
 
