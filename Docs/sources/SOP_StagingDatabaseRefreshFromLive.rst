@@ -349,7 +349,7 @@ Regardless of the database being restored, we must ensure that, at least, a part
 - AZSTG01 is *normally* a partially depersonalised database.
 - AZSTG02 is normally a fully depersonalised database.
 
-Choose one of the following as appropriate, and note that while the depersonalisation is continuing, the 
+Choose the correct script to run as appropriate.
 
 Partial Depersonalisation
 -------------------------
@@ -387,12 +387,10 @@ You must check with ``RMAN`` as to the settings of the parameters for the newly 
     oraenv azstg01
     rman target sys/password@azstg01 nocatalog
     
+    configure archivelog deletion policy to none;
     configure backup optimization on;
     configure controlfile autobackup on;
-    configure archivelog deletion policy to backed up 2 times to disk;
-    configure controlfile autobackup format for device type disk
-    to '\\Backman01\rmanbackup\backups\AZSTG01\autobackup\%F';
-
+    configure controlfile autobackup format for device type disk clear;
     show all;
     
     # Check and adjust as appropriate, the remaining parameters.
