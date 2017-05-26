@@ -27,13 +27,11 @@ The initial steps are identical to steps 1-6 above.
 
 7.  Run IO Terminal Adhoc Fix attached. (Or, see below.)
 #.  Check USER folder as extracted from zip. 
-#.  For each user, generate a secure password and amend the script.
-#.  Note the username/password combinations.
+#.  For each user, generate a secure password and amend the script to use the password defined for each user in KeePass under Production->Services->UserName.
 #.	Check the logs.
 #.	Disable restricted session.
 #.	Do a schema compare between PreProd and Live.
 #.	Send results to Lead dev.
-#.  Send username/password combinations to Windows (DevOps) support on the night - Yussuf, Andy W, etc.
 #.  Send email - "I am finished! - please check".
 #.  Delete restore point, when confirmation that all is well has been received.
 
