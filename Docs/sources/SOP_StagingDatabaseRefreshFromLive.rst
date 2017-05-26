@@ -12,6 +12,8 @@ Refreshing the staging databases from production dump files carries out two sign
 
 In addition, by using the daily dumps, we avoid the possibility of any impact on the production server as there would normally be around 7 RMAN sessions logged in and working to varying degrees of intensity, on the production database had we run a ``duplicate from active database``.
 
+    **Warning**: You must be aware that during the copying of the data files, the auxiliary database must have block change tracking disabled. If you don't do this, a bug in Oracle will trash the auxiliary database.
+
 
 Process Outline
 ===============
@@ -65,7 +67,7 @@ If the ``initAZSTG01.ora`` file contains more than the above, edit out everythin
 Restore the CFG Database Dumps
 ==============================
 
-To restore the database dumps as a new database, we simply run a ``DUPLICATE DATABASE ...`` command within RMAN, while conneted *only* to the ``AZSTG01`` database as the auxiliary database:
+To restore the database dumps as a new database, we simply run a ``DUPLICATE DATABASE ...`` command within RMAN, while connected *only* to the ``AZSTG01`` database as the auxiliary database:
 
 ..  code-block:: none
 
@@ -79,6 +81,33 @@ To restore the database dumps as a new database, we simply run a ``DUPLICATE DAT
     rman AUXILIARY sys/password@azstg01
         
     @refresh_azstg01.rman
+
+
+**URGENT**: During the time that ``RMAN`` has opened the database in MOUNT mode, as it does when restoring the data files, you must login as SYSDBA to a separate ``SQL*Plus`` session and:
+    
+    ..  code-block:: sql
+    
+        alter database disable block change tracking;
+        
+    Otherwise the following will occur and the database will be trashed:
+    
+    ..  code-block:: none
+    
+        ORA-00283: recovery session canceled due to errors
+        ORA-19755: could not open change tracking file
+        ORA-19750: change tracking file: 'F:\MNT\FAST_RECOVERY_AREA\CFG\BCT.DBF'
+        ORA-27041: unable to open file
+        OSD-04002: unable to open file
+        O/S-Error: (OS 3) The system cannot find the path specified.
+        RMAN-00571: ===========================================================
+        RMAN-00569: =============== ERROR MESSAGE STACK FOLLOWS ===============
+        RMAN-00571: ===========================================================
+        RMAN-03002: failure of Duplicate Db command at 05/25/2017 14:33:46
+        RMAN-05501: aborting duplication of target database
+
+    See the "Fix for Block Change Tracking Problems" section below, for a fix for this problem. The database will not be able to be opened if the above error has occurred. You will also note that the file name mentioned is the file name for the production database. This is the cause of the problem. Also, the error doesn't *always* occur!
+    
+    As long as you disable block change tracking, on the staging database being refreshed, *before* ``RMAN`` attempts to ``alter database open resetlogs``, you will be safe.
 
 The ``refresh_azstg01.rman`` script does the hard work, and (currently) contains the following contents:
 
@@ -145,8 +174,8 @@ As noted in the comments, running a ``DUPLICATE DATABASE`` command from dumps on
 -   Do not attempt to allocate any channels *except* AUXILIARY ones;
 -   Tell RMAN what database to duplicate from;
 -   Tell RMAN where to look for the dumps of the named database.
-    
 
+    
 Post Restore Clean Up
 =====================
 
@@ -409,4 +438,155 @@ You will also need to register the database with the ``RMAN`` catalog [sic] if i
     exit;
     
     
+..  _FIX_BCT:
+    
+Fix for Block Change Tracking Problems
+======================================
 
+As noted above, if the block change tracking is not turned off, Oracle *sometimes* fails in setting up block change tracking on the cloned database, as it attempts to use the source database's path for the BCT file, and that fails on the destination server if the path doesn't exist. The process is as follows:
+
+-   Recreate the controlfiles;
+-   Recover the database;
+-   Open the database & reset the logs;
+-   Add the temporary tablespace files;
+-   Create an spfile;
+-   Restart the database.
+
+Recreate the Controlfiles
+-------------------------
+
+If you look at the various "name" parameters for the cloned database, you will see that ``DB_NAME`` is still set to the CFG database name, plus, the control file will also have CFG recorded as the database name. We cannot open the database in this state, so, we need to recreate the control files. Login to the database, which is most likely MOUNTed, and should be, as SYSDBA and:
+
+..  code-block:: sql
+
+    alter database
+    backup controlfile to trace
+    as '?\database\controlfile.sql'
+    resetlogs;
+    
+This creates a SQL script to recreate the control files. The file is located in ``%ORACLE_HOME%\database`` and needs to be edited.
+
+-   Delete all the text - comments - down to the ``CREATE CONTROLFILE REUSE...`` command. 
+-   Delete, or comment out, all the commands after the closing ';' for the above command, however, keep any commands relating to the temporary tablespace(s) near the end. We need these later.
+-   Make sure that all redo-log paths are correct for the staging database, they may still relate to the production database.
+-   Make sure that all the data file paths are correct for the staging database.
+-   Save the file.
+
+The spfile is also incorrect, so we need a pfile to be generated so that we can correct it:
+
+..  code-block:: sql
+
+    create pfile='?\database\initTEMP.ora' from spfile='?\database\spfileAZSTG01.ora';
+    
+Edit the generated pfile and correct the ``DB_NAME`` parameter, and any others that still indicate the production database. You can ignore the various file_name_convert parameters though.
+
+Now we need to start the database in ``NOMOUNT`` mode, using the current, incorrect, spfile, and recreate the controlfiles:
+
+..  code-block:: sql
+
+    shutdown abort
+    startup nomount
+    @?\databasecontrolfile.sql
+    
+If the script errors out, fix the problems and rerun the script.    
+
+    
+Recover the Database
+--------------------
+
+The database should now be mounted:
+
+..  code-block:: sql
+
+    alter database mount;
+
+If Oracle says it is already mounted, you can ignore the error. Usually a database is mounted after recreating the controlfiles, but it's best to be absolutely sure. Try opening the database:
+    
+..  code-block:: sql
+
+    alter database open resetlogs;
+    
+If this works, then we will not need to recover the database. Proceed to the next section - adding back the temporary tablespace files.
+
+The database needs some further recovery, so for this we will need at least one archived log from the production server. To find out whihc one, we should attempt a recovery:
+
+..  code-block:: sql
+
+    recover database using backup controlfile until cancel;
+    
+Oracle will suggest an archived log to use to begin the recovery. Make a note of the date, and the sequence number from the filename, for example:
+
+..  code-block:: none
+
+    ORA-00279: change 297591712 generated at 05/25/2017 03:39:27 needed for thread 1
+    ORA-00289: suggestion : H:\MNT\FAST_RECOVERY_AREA\AZSTG02\ARCHIVELOG\2017_05_25\O1_MF_1_13770_%U_.ARC
+    
+In the suggested file, Oracle wants sequence 13770 which was created on 25th may 2017. Cancel the recovery now.
+
+..  code-block:: sql
+
+    CANCEL
+
+It should be in upper case.
+
+We now need to exit from ``SQL*Plus`` and use ``RMAN`` to do the recovery. It is easier this way because the files we copy from production will not match exactly the randomly generated names give in the suggestion. ``SQL*Plus`` cannot cope with this, but ``RMAN`` can.
+
+On the *production* server, locate the FRA for the database, and the archivelog folder that matches the date suggested by the previous recover attempt that we cancelled. Find the appropriate archived log file with the desired sequence number, and copy that, plus the next 4 sequential logs from production to the FRA for the staging database, into a folder on the staging server, with the same name as that on the suggested filename mentioned above - usually yyyy-mm-dd.
+
+In ``RMAN`` attempt a recovery. You will not need to rename the 5 copied archived logs. RMAN will find the correct ones, note the file names as they are, and apply them.
+
+..  code-block:: none
+
+    rman target sys/password@azstg01
+    
+    run {
+        set until sequence = nnnn;
+        recover database using backup controlfile;
+    }
+    
+In the above, 'nnnn' is *one higher* than the highest sequence of the archived logs you copied from the production server. Once the recovery is done, attempt to open the database:
+    
+..  code-block:: none
+
+    alter database open resetlogs;
+
+If the attempt fails, further recovery is needed. Copy the next 5 archived logs from production to the staging server and repeat the above commands with the appropriate change to the until sequence specified.
+
+Exit from ``RMAN`` when the database opens.
+
+
+Add Temporary Tablespace Files
+------------------------------
+
+In ``SQL*Plus`` as the SYSDBA user again, we need to add the TEMP tablespace's files.
+
+..  code-block:: sql
+
+    alter tablespace temp add tempfile
+    'h:\mnt\oradata\AZSTG01\temp01.dbf' size 20m
+    autoextend on next 20m maxsize unlimited;
+    
+    alter tablespace temp add tempfile
+    'h:\mnt\oradata\AZSTG01\temp02.dbf' size 20m
+    autoextend on next 20m maxsize unlimited;
+    
+
+
+Create the Spfile
+-----------------
+
+The database is currently running with a pfile. We need to recreate a corrected spfile from this pfile:
+
+..  code-block:: sql
+
+    create spfile='?\database\spfileAZSTG01.ora' from pfile='?\database\initTEMP.ora';
+    
+
+Restart the Database
+--------------------    
+    
+..  code-block:: sql
+
+    startup force;
+    
+The database is now ready for use, and for the post clone tidy up to be carried out. See above for details.    
