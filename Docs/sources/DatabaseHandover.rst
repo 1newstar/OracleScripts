@@ -15,28 +15,24 @@ Security Considerations
 
 In Unix, for security and auditing purposes, the normal manner of operation would be to:
 
--  login to the server as "your name";
--  ``su - oracle``
--  startup/stop/maintain databases.
+-	login to the server as "your name";
+-	``su - oracle``
+-	startup/stop/maintain databases.
 
-In Windows, the su command is absent, so we have to do things in a slightly different manner:
+In Windows, the ``su`` command is absent, so we have to do things in a slightly different manner:
 
--  login to the server as "your name";
--  SHIT + RIGHT-CLICK on the batch file you want to use;
--  Select "run as a different user";
-
--  Enter:
-
-   -  Username: casfs\\svc\_oracleprod for production, or,
-      casfs\\svc\_oracleppd for pre-production;
-   -  Password: as appropriate for the username
+-	login to the server as "your name";
+-	SHIT + RIGHT-CLICK on the batch file you want to use;
+-	Select "run as a different user";
+-   Enter:
+    -	Username: ``casfs\svc_oracleprod`` for production, or, ``casfs\svc_oracleppd`` for pre-production;
+    -	Password: as appropriate for the username
 
 It's a pain to work with, but is an apparent necessity for auditing purposes.
 
-You should be aware that *all* the services for oracle database 'stuff' run under one or the other users, and any jobs or tasks that you may set up on the servers will have to run under those users too. RMAN, for
-example.
+You should be aware that *all* the services for oracle database 'stuff' run under one or the other users, and any jobs or tasks that you may set up on the servers will have to run under those users too. RMAN, for example.
 
-There are two folders, ``c:\scripts`` and ``c:\scripts\RMAN``, which is on the path for the above users. This is the best place to put scripts etc that need to be run.
+There are two folders, ``c:\scripts`` and ``c:\scripts\RMAN``, which are on the path for the above users. This is the best place to put scripts etc that need to be run.
 
 
 Oracle Administration Assistant
@@ -44,45 +40,45 @@ Oracle Administration Assistant
 
 This is a *hard to find* utility which allows you to configure how a database will start and stop, in a manner better than ``oradim`` does. We need to use this to:
 
--  Disable automatic startup of the database when the service is started. We need this as we do not want any database with a standby to ``OPEN`` when the server or service is restarted as this will seriously mess up the primary and standby if both are ``OPEN`` at the same time.
--  Enable the databases that do not have standbys to ``OPEN`` automatically when the server and/or service is restarted. This means that test, UAT etc databases are online with the server and the DBAs don't have to manually start them.
+-	Disable automatic startup of the database when the service is started. We need this as we do not want any database with a standby to ``OPEN`` when the server or service is restarted as this will seriously mess up the primary and standby if both are ``OPEN`` at the same time.
+-	Enable the databases that do not have standbys to ``OPEN`` automatically when the server and/or service is restarted. This means that test, UAT etc databases are online with the server and the DBAs don't have to manually start them.
 
 The process is:
 
--  Right-click the start button;
--  Select Search;
--  Type, on the far right, "Administration". The default selection will
-   be "Administration Assistant for Windows".
--  Right-Click and select "Run as administrator". Confirm your desires.
+-	Right-click the start button;
+-	Select Search;
+-	Type, on the far right, "Administration". The default selection will be "Administration Assistant for Windows".
+-	Right-Click and select "Run as administrator". Confirm your desires.
 
 When the utility starts:
 
--  Open "Oracle Managed Objects";
--  Open "Computers";
--  Open your computer name;
--  Open "Databases";
+-	Open "Oracle Managed Objects";
+-	Open "Computers";
+-	Open your computer name;
+-	Open "Databases";
 
 For each database you wish to amend:
 
--  Right-click the database name;
--  Select "Startup/Shutdown options"
--  On the "Oracle Instance" tab:
-   -  Make sure that "Startup instance ..." is:
-      -  unchecked for standby enabled databases;
-      -  checked for stand alone databases.
-   -  Make sure "shut down instance ..." is checked;
-   -  Make sure "immediate" is checked.
-   -  Click Apply.
--  On the "Oracle NT Service" tab:
-   -  Set the service startup as desired. Automatic is fine for all
-      databases.
-   -  Make sure that "This account" is selected.
-   -  Make sure that the credentials for svc\_oracleprod or
-      svc\_oracleppd are entered.
-   -  Click Apply.
-   -  Click OK.
+-	Right-click the database name;
+-	Select "Startup/Shutdown options";
 
-**Note** It appears that setting the service to automatic startup *does not stick*. The service appears to always remain in manual startup. Perhaps oradim can help here.
+-   On the "Oracle Instance" tab:
+    -	Make sure that "Startup instance ..." is:    
+        -	unchecked for standby enabled databases;
+        -	checked for stand alone databases.        
+    -	Make sure "shut down instance ..." is checked;
+    -	Make sure "immediate" is checked.
+    -	Click Apply.
+   
+-	On the "Oracle NT Service" tab:
+
+    -	Set the service startup as desired. Automatic is fine for all databases.
+    -	Make sure that "This account" is selected.
+    -	Make sure that the credentials for ``svc_oracleprod`` or ``svc_oracleppd`` are entered.
+    -	Click Apply.
+    -	Click OK.
+
+**Note** It appears that setting the service to automatic startup *does not stick*. The service appears to always remain in manual startup. You may have to use the ``services`` utility to make the services automatic..
 
 
 Software Install Kits
@@ -113,7 +109,7 @@ Oraenv
 
 Windows has no concept of the ``oraenv`` utility, so we have to do it manually. (See below for a useful script that pretty much emulates ``oraenv`` as found on Unix systems.)
 
-.. code-block:: batch
+..	code-block:: batch
 
     set oracle_sid=whatever
     set oracle_home=c:\OracleDatabase\product\11.2.0\dbhome_1
@@ -125,7 +121,7 @@ You should beware of the last one though, if you are importing the NOROWS import
 
 If you are importing, it's best to:
 
-.. code-block:: batch
+..	code-block:: batch
 
     set nls_date_format=
 
@@ -151,13 +147,13 @@ Oraenv script
 
 This can be run, in batch files or shell sessions, as follows:
 
-.. code-block:: batch
+..	code-block:: batch
 
     oraenv <required_database>
 
 For example:
 
-.. code-block:: batch
+..	code-block:: batch
 
     oraenv ppdcfg
 
@@ -178,12 +174,10 @@ And also on an ``oratab`` file, looked for in the following locations, in order 
 Running ``oraenv`` also looks for and uses the ``%ORAENV_ASK%`` environment variable, as follows:
 
 -   ``%ORAENV_ASK%`` = YES:
-
-    -   Will prompt for a valid ``%ORACLE_SID%`` if none supplied when calling ``oraenv``.
+    -	Will prompt for a valid ``%ORACLE_SID%`` if none supplied when calling ``oraenv``.
     
 -   ``%ORAENV_ASK%`` = NO:
-
-    -   Will not prompt for a valid ``%ORACLE_SID%`` if none supplied when calling ``oraenv`` but will simply display the current oracle environment.
+    -	Will not prompt for a valid ``%ORACLE_SID%`` if none supplied when calling ``oraenv`` but will simply display the current oracle environment.
     
     
     
@@ -192,19 +186,19 @@ OraRunning Script
 
 On Unix the command:
 
-.. code-block:: bash
+..  code-block:: bash
 
     ps -ef|grep -i pmon
 
 is extremely handy for seeing which databases are up and which are missing. On Windows, we have similar usefulness. We have to do this:
 
-.. code-block:: batch
+..  code-block:: batch
 
     net start | find /i "OracleService" 
 
 Which is far too much typing on a daily basis. I've created a script called ``OraRunning`` to do the above.
 
-.. code-block:: batch
+..	code-block:: batch
 
     @echo off
     rem Lists all the service that are for an Oracle database
@@ -228,7 +222,7 @@ Which is far too much typing on a daily basis. I've created a script called ``Or
 
 Just call the script as follows:
 
-.. code-block:: batch
+..  code-block:: batch
 
     orarunning
 
@@ -236,7 +230,7 @@ And the list of running services will be displayed. You can also double-click th
 
 Be aware, however, that just because a service is running, the database may still need to be started in the normal manner. For example:
 
-.. code-block:: batch
+..  code-block:: batch
 
     c:\> oraenv ppdcfg
 
@@ -290,7 +284,7 @@ This would result is something resembling the following:
 
 
 HexDump Utility
----------------    
+---------------	  
 
 A somewhat useful utility to dump out a file in hex.
 
@@ -298,10 +292,10 @@ A somewhat useful utility to dump out a file in hex.
 
     hexdump file_name [start] [length]
     
--   Start defaults to 0 and means the beginning of the file.
--   Length defaults to the full length of the file, or from start until the end.
+-	 Start defaults to 0 and means the beginning of the file.
+-	 Length defaults to the full length of the file, or from start until the end.
 
-The outut format is quite simple:
+The output format is quite simple:
 
 ..  code-block:: none
 
@@ -349,9 +343,9 @@ Servers
 Production Servers
 ------------------
 
--  uvorc01 - Primary production server.
--  uvorc02 - Standby production server.
--  druvorc03 - DR production server.
+-	uvorc01 - Primary production server.
+-	uvorc02 - Standby production server.
+-	druvorc03 - DR production server.
 
 On the servers above, the oracle user is ``svc_oracleprod``.
 
@@ -359,8 +353,8 @@ On the servers above, the oracle user is ``svc_oracleprod``.
 Pre-Production Servers
 ----------------------
 
--  ppduvorc01 - Primary production server.
--  ppduvorc02 - Standby production server.
+-	ppduvorc01 - Primary production server.
+-	ppduvorc02 - Standby production server.
 
 There isn't a DR server in the pre-production environment.
 
@@ -385,31 +379,31 @@ Trace files can be found in ``%ORACLE_BASE%\diag\rdbms\<DB_NAME>\<DB_UNIQUE_NAME
 Production Databases
 --------------------
 
--  CFG - Primary production database.
--  CFGSB - Standby production database.
--  CFGDR - DR standby production database.
--  CFGAUDIT - Primary Audit database.
--  CFGAUDSB - Standby audit database.
--  CFGAUDDR - DR Audit database.
--  CFGRMN - Primary RMAN catalog database.
--  CFGRMNSB - Standby RMAN catalog database.
--  CFGRMNDR - DR standby RMAN catalog database.
+-	CFG - Primary production database.
+-	CFGSB - Standby production database.
+-	CFGDR - DR standby production database.
+-	CFGAUDIT - Primary Audit database.
+-	CFGAUDSB - Standby audit database.
+-	CFGAUDDR - DR Audit database.
+-	CFGRMN - Primary RMAN catalog database.
+-	CFGRMNSB - Standby RMAN catalog database.
+-	CFGRMNDR - DR standby RMAN catalog database.
 
 
 Pre-Production Databases
 ------------------------
 
--  PPDCFG - Primary pre-production database.
--  PPDCFGSB - Standby pre-production database.
--  PPDRMN - Primary pre-production RMAN catalog database.
--  PPDRMNSB - Standby pre-production RMAN catalog database.
+-	PPDCFG - Primary pre-production database.
+-	PPDCFGSB - Standby pre-production database.
+-	PPDRMN - Primary pre-production RMAN catalog database.
+-	PPDRMNSB - Standby pre-production RMAN catalog database.
 
 DevOps Databases
 ----------------
 
--   AZSTG01 - Partially depersonalised staging database used to create further UAT etc databases where full depersonalisation is not able to be utilised. This is also used as a destination database when testing the RMAN backups of the production database for restorability.
--   AZSTG01 - Fully depersonalised staging database used to create further DEV etc databases where access to personal data is not permitted.
-- CFGDEMO - Used by DevOps to test deployments.
+-	AZSTG01 - Partially depersonalised staging database used to create further UAT etc databases where full depersonalisation is not able to be utilised. This is also used as a destination database when testing the RMAN backups of the production database for restorability.
+-	AZSTG01 - Fully depersonalised staging database used to create further DEV etc databases where access to personal data is not permitted.
+-   CFGDEMO - Used by DevOps to test deployments.
 
 
 Startup/Shutdown
@@ -427,13 +421,13 @@ Starting Services
 
 Services are started thus:
 
-.. code-block:: batch
+..	code-block:: batch
 
     net start OracleService<db_unique_name>
 
 For example:
 
-.. code-block:: batch
+..	code-block:: batch
 
     net start OracleServicePPDCFG
 
@@ -447,7 +441,7 @@ Stopping a service will stop the database. The database will be closed in a mann
 
 Services are stopped thus:
 
-.. code-block:: batch
+..	code-block:: batch
 
     sqlplus sys/password@database as sysdba
     shutdown immediate
@@ -457,7 +451,7 @@ Services are stopped thus:
 
 For example:
 
-.. code-block:: batch
+..	code-block:: batch
 
     ...
     net stop OracleServicePPDCFG
@@ -474,7 +468,7 @@ Because of some foible in the application(s) it is not possible, on Windows, to 
 
 The ``sqlnet.ora`` file must resemble the following in order for the applications to work correctly:
 
-.. code-block::
+..	code-block:: none
 
     # This file is actually generated by netca. But if customers choose to 
     # install "Software Only", this file won't exist and without the native 
@@ -503,7 +497,9 @@ This of course, prevents DBAs from connecting to anything, or running RMAN with 
 TNSNAMES.ORA
 ============
 
-**Note:** Any changes made to the ``tnsnames.ora`` file on a server, must be propagated to the others in that group of Production or Pre-production servers and to the central ``tnsnames.ora`` which is located at ``\CFSLDSFP01\Apps.Net\Aura\TNSNAMES_CENTRE\``.
+    **Note:** Any changes made to the ``tnsnames.ora`` file on a server, must be propagated to the others in that group of Production or Pre-production servers and to the central ``tnsnames.ora`` which is located at ``\CFSLDSFP01\Apps.Net\Aura\TNSNAMES_CENTRE\``.
+
+    **Warning:** Do not copy the ``tnsnames.ora`` from production to pre-production, or vice versa, when changes are made. The ``rmancatsrv`` alias is *different* in production and pre-production. Do not get them confused.
 
 Because there are standby and DR databases configured, there are changes in the ``tnsnames.ora`` file to cope with this, regardless of which actual instance is running the database at any given point in time.
 
@@ -513,7 +509,7 @@ See "Data Guard Switchover/Failover" below for details.
 
 In addition to the service names, however, you can still connect to the individual databases using their default service names, set up as tns aliases, as per the following example for the production database. The other databases are similar:
 
-.. code-block::
+..	code-block:: none
 
     CFG =
       (DESCRIPTION =
@@ -574,7 +570,7 @@ Data Guard Switchover/Failover
 
 Only the primary running database starts the appropriate service, the standby database(s) physically stop it. This is done by way of the following trigger, owned by SYS:
 
-.. code-block:: sql
+..	code-block:: sql
 
     CREATE OR REPLACE TRIGGER SYS.cfgsrv_trigger
     after startup on database
@@ -603,21 +599,21 @@ We *attempt* to be consistent in the naming of services etc. In this example, th
     
 The services currently in use are:
 
--  CFGSRV - Production database service.
--  CFGAUDSRV - Production Audit database service.
--  CFGRMNSRV - Production RMAN catalog database service.
+-	CFGSRV - Production database service.
+-	CFGAUDSRV - Production Audit database service.
+-	CFGRMNSRV - Production RMAN catalog database service.
 
 And for pre-production, we have:
 
--  PPDCFGSRV - Pre-production database service.
--  PPDRMNSRV - Pre-production RMAN catalog database service.
+-	PPDCFGSRV - Pre-production database service.
+-	PPDRMNSRV - Pre-production RMAN catalog database service.
 
 Services are created and deleted by way of the DBMS\_SERVICE package.
 
 **Note:** In the event of a switchover, it is required that the scheduled tasks, run under the Windows Task Scheduler, which carry out RMAN backups are:
 
--  Disabled on what was the *previously* running primary server; and
--  Enabled on the *currently* running primary server.
+-	Disabled on what was the *previously* running primary server; and
+-	Enabled on the *currently* running primary server.
 
 
 RMAN
@@ -675,7 +671,7 @@ The following configuration has been set up so far, you may reconfigure as desir
 CFG
 ---
 
-.. code-block:: none
+..	code-block:: none
 
     RMAN configuration parameters for database with db_unique_name CFG are:
     CONFIGURE RETENTION POLICY TO REDUNDANCY 2558;
@@ -690,7 +686,7 @@ CFG
 CFGAUDIT
 --------
 
-.. code-block:: none
+..	code-block:: none
 
     RMAN configuration parameters for database with db_unique_name CFGAUDIT are:
     CONFIGURE RETENTION POLICY TO REDUNDANCY 2558;
@@ -703,7 +699,7 @@ CFGAUDIT
 CFGRMN
 ------
 
-.. code-block:: none
+..	code-block:: none
 
     RMAN configuration parameters for database with db_unique_name CFGRMN are:
     CONFIGURE RETENTION POLICY TO REDUNDANCY 31;
@@ -716,7 +712,7 @@ CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
 PPDCFG
 ------
 
-.. code-block:: none
+..	code-block:: none
 
     RMAN configuration parameters for database with db_unique_name PPDCFG are:
     CONFIGURE RETENTION POLICY TO REDUNDANCY 10;
@@ -728,7 +724,7 @@ PPDCFG
 PPDRMN
 ------
 
-.. code-block:: none
+..	code-block:: none
 
     RMAN configuration parameters for database with db_unique_name PPDRMN are:
     CONFIGURE RETENTION POLICY TO REDUNDANCY 10;
@@ -742,8 +738,8 @@ Catalogs
 
 As mentioned above, there are two main RMAN catalog databases. These are accessed via the following TNS alias names:
 
--  CFGRMNSRV & RMANCATSRV - the production RMAN catalog service;
--  PPDRMNSRV & RMANCATSRV - the pre-production RMAN catalog service.
+-	CFGRMNSRV & RMANCATSRV - the production RMAN catalog service;
+-	PPDRMNSRV & RMANCATSRV - the pre-production RMAN catalog service.
 
 There is an alias, as you will note from the above, ``RMANCATSRV``, on both production and pre-production servers which connects to the appropriate RMAN catalog on that server's type, regardless. This is used by the scripts to avoid having to have different scripts on each server type.
 
@@ -765,19 +761,19 @@ This is slightly different from the old 9i regime where levels 2 through 4 exist
 
 Craig has a diagram of the RMAN backup environment, but in summary:
 
--  RMAN backs up the database to a specific drive. This is mapped on all
+-	RMAN backs up the database to a specific drive. This is mapped on all
    servers as the same disk, ``\\BACKMAN01\RMANBackup\``, but only within 
    the service user's account by
    default, so there's no problem if we switch from backing up the
    primary to backing up the standby, or the DR databases.
--  The backups are kept on disc for two months. (This may be subject to
+-	The backups are kept on disc for two months. (This may be subject to
    change).
--  Backups older than two months are copied to a backup vault. This
+-	Backups older than two months are copied to a backup vault. This
    takes place on a separate server so as to reduce impact on production
    servers.
--  They are not, *under any circumstances*, deleted or obsoleted in
+-	They are not, *under any circumstances*, deleted or obsoleted in
    RMAN. RMAN continues to "think" that they are available.
--  These vaulted database backups, including archived logs, are kept for
+-	These vaulted database backups, including archived logs, are kept for
    as long as is legally required. (Currently 7 years.)
 
    
@@ -860,12 +856,12 @@ This script can be used to backup any database on the server. It is used by the 
 
 The script takes up to 4 parameters:
 
--  Database name - *mandatory*. The SID of the database to be backed up.
--  SYS password - *mandatory*. The SYS password for the database being
+-	Database name - *mandatory*. The SID of the database to be backed up.
+-	SYS password - *mandatory*. The SYS password for the database being
    backed up.
--  RMAN Level - *optional*. The incremental level for an RMAN backup.
+-	RMAN Level - *optional*. The incremental level for an RMAN backup.
    Defaults to 0. Allowed values are 0 or 1 only.
--  Backup Location - *optional*. Where the backups will be written to.
+-	Backup Location - *optional*. Where the backups will be written to.
    Defaults to ``\\Backman01\RMANBackup\backups``. A folder for the
    database name will be created if necessary.
 
@@ -885,9 +881,9 @@ This script backs up any database using an RMAN incremental level 0 or 1 backup.
 
 The environment variables that must be configured are:
 
--  ORACLE\_SID - the database to be backed up.
--  ORACLE\_HOME - The usual Oracle Home location.
--  BACKUP\_LOCATION - Where the backups will be written to. Need not
+-	ORACLE\_SID - the database to be backed up.
+-	ORACLE\_HOME - The usual Oracle Home location.
+-	BACKUP\_LOCATION - Where the backups will be written to. Need not
    exist.
 
 The RMAN catalogue in use is ``rman11g@cfgrmnsrv`` on pre-production servers and ``rman11g@cfgrmnsrv`` on production servers. It was considered wise to set up a common RMAN alias in the tnsnames, on each server, to point at the appropriate catalog database to avoid problems of having to edit the script differently on each server – hence the two different catalog databases have the same service name in ``tns_names.ora``.
@@ -900,13 +896,13 @@ Logs for the backup are written to a folder named ``%BACKUP_LOCATION%\logs\%ORAC
 
 The script requires two mandatory parameters:
 
--  Level - which must be 0 or 1;
--  SYS\_PASSWORD - which is the SYS password for the database being
+-	Level - which must be 0 or 1;
+-	SYS\_PASSWORD - which is the SYS password for the database being
    backed up.
 
 An example of its use is:
 
-.. code-block:: batch
+..	code-block:: batch
 
     c:\> cd c:\scripts\RMAN
 
@@ -955,17 +951,17 @@ What's now Running
 
 Four definite "keepers" were determined on examination of the current cronjobs list from the Solaris server. These are:
 
--  Statsgen
--  Expire\_passwords
--  Endofday\_audit
--  Endofday\_utmsdrm
+-	Statsgen
+-	Expire\_passwords
+-	Endofday\_audit
+-	Endofday\_utmsdrm
 
 These have been rewritten as a package, owned by the SYS schema, named ``SOLARIS_CRONJOBS``.
 
 Two schedules have been set up to run these at the desired times:
 
--  SUNDAY\_1800 - Used by statsgen.
--  DAILY\_2020 - Used by the remainder.
+-	SUNDAY\_1800 - Used by statsgen.
+-	DAILY\_2020 - Used by the remainder.
 
 The names should indicate when the jobs are expected to run.
 
@@ -979,9 +975,9 @@ Unfortunately, ``DBMS_OUTPUT`` data are lost when the jobs run under the schedul
 
 The tables in use are:
 
--  sys.statsgen\_errors
--  sys.expire\_password\_log
--  sys.utmsodrm\_errors
+-	sys.statsgen\_errors
+-	sys.expire\_password\_log
+-	sys.utmsodrm\_errors
 
 The table names should indicate which job they are used by. Any desired reports can be easily generated from these tables, perhaps using OEM to do so?
 
@@ -1013,12 +1009,12 @@ Oracle Enterprise Manager
 
 In OEM as the ``fs_dba`` account, change the ``monitoring credentials`` for the database(s) whenever the SYS password changes on the database - if the database is part of a primary-standby setup. If the database is standalone, the ``dbsnmp`` account will be used for monitoring.
 
--   Go to ``setup``->``security``->``monitoring credentials``
--   Select target type of ``Database Instance``
--   Click ``Manage monitoring credentials``
--   Select ``Monitoring Database Credentials`` in the drop down & click ``search``.
--   Select the correct database and click ``set credentials``.
--   Enter the new password twice and click ``test and save``.
+-	 Go to ``setup``->``security``->``monitoring credentials``
+-	 Select target type of ``Database Instance``
+-	 Click ``Manage monitoring credentials``
+-	 Select ``Monitoring Database Credentials`` in the drop down & click ``search``.
+-	 Select the correct database and click ``set credentials``.
+-	 Enter the new password twice and click ``test and save``.
 
 DBSNMP
 ------
@@ -1112,19 +1108,19 @@ Production
 
 The following tasks have been set up in production.
 
--  **CFG\_Level\_0\_Sunday.xml** – backs up the production CFG database
+-	**CFG\_Level\_0\_Sunday.xml** – backs up the production CFG database
    at 03:00 every Sunday by running a level 0 RMAN backup.
--  **CFG\_Level\_1\_Mon\_to\_Sat** – backs up the CFG production
+-	**CFG\_Level\_1\_Mon\_to\_Sat** – backs up the CFG production
    database at 03:00 every Monday through Saturday by running a level 1
    RMAN backup.
--  **CFGAUDIT\_Level\_0\_Sunday** – backs up the production CFGAUDIT
+-	**CFGAUDIT\_Level\_0\_Sunday** – backs up the production CFGAUDIT
    database at 22:00 every Sunday by running a level 0 RMAN backup.
--  **CFGAUDIT\_Level\_1\_Mon\_to\_Sat** – backs up the production
+-	**CFGAUDIT\_Level\_1\_Mon\_to\_Sat** – backs up the production
    CFGAUDIT database at 22:00 every Monday through Saturday by running a
    level 1 RMAN backup.
--  **CFGRMN\_Level\_0\_Sunday** – backs up the production RMAN catalog
+-	**CFGRMN\_Level\_0\_Sunday** – backs up the production RMAN catalog
    database at 01:00 every Sunday by running a level 0 RMAN backup.
--  **CFGRMN\_Level\_1\_Mon\_to\_Sat** – backs up the production RMAN
+-	**CFGRMN\_Level\_1\_Mon\_to\_Sat** – backs up the production RMAN
    catalog database at 01:00 every Monday through Saturday by running a
    level 1 RMAN backup.
 
@@ -1134,15 +1130,15 @@ Pre-Production
 
 The following tasks have been set up in production.
 
--  **PPDCFG\_Level\_0\_Sunday** - backs up the pre-production PPDCFG
+-	**PPDCFG\_Level\_0\_Sunday** - backs up the pre-production PPDCFG
    database at 21:00 every Sunday by running a level 0 RMAN backup.
--  **PPDCFG\_Level\_1\_Mon\_to\_Sat** - backs up the pre-production
+-	**PPDCFG\_Level\_1\_Mon\_to\_Sat** - backs up the pre-production
    PPDCFG database at 21:00 every Monday through Saturday by running a
    level 1 RMAN backup.
--  **PPDRMN\_Level\_0\_Sunday** - backs up the pre-production RMAN
+-	**PPDRMN\_Level\_0\_Sunday** - backs up the pre-production RMAN
    catalog database at 02:00 every Sunday by running a level 0 RMAN
    backup.
--  **PPDRMN\_Level\_1\_Mon\_to\_Sat** - backs up the pre-production RMAN
+-	**PPDRMN\_Level\_1\_Mon\_to\_Sat** - backs up the pre-production RMAN
    catalog database at 21:00 every Monday through Saturday by running a
    level 1 RMAN backup.
 
@@ -1203,11 +1199,11 @@ Finding Rogue Database Sessions
 
 It is possible that a rogue, or otherwise, session in the database can kill performance. How to determine the culprit? This is after you have determined that the problem isn't with locking of course.
 
--   On the database server, open Task Manager.
--   On the performance tab, click to open the Resource Monitor.
--   Go to the Overview tab, and look at the "mini indicators" to see if the problem is CPU, Memory, Disc or Network - look for high percentages or similar. CPU is easiest to track down - information regarding the others is harder to come by.
--   Click the appropriate tab, depending on the problem, and ensure that the Processes list is at the top.
--   Sort the list by the appropriate column. ``Oracle.exe`` will no doubt appear at the top. Note the ``PID`` column for that process.
+-	 On the database server, open Task Manager.
+-	 On the performance tab, click to open the Resource Monitor.
+-	 Go to the Overview tab, and look at the "mini indicators" to see if the problem is CPU, Memory, Disc or Network - look for high percentages or similar. CPU is easiest to track down - information regarding the others is harder to come by.
+-	 Click the appropriate tab, depending on the problem, and ensure that the Processes list is at the top.
+-	 Sort the list by the appropriate column. ``Oracle.exe`` will no doubt appear at the top. Note the ``PID`` column for that process.
 
 The ``oracle.exe`` process is the main database process, and all Windows connections are done via threads of this process. To get a database SID from a thread involves a little more work. Performance Monitor is no longer of any use. Move on ...
 
@@ -1217,22 +1213,22 @@ Open ``c:\scripts\ProcessExplorer``, on the database server, in file explorer an
 
 Once running:
 
--   Select view->show Process Tree, if necessary.
--   Select view->update speed and set it to 5 seconds, or longer, otherwise it refreshes too quickly and makes finding things difficult.
--   Click on the ``process`` header in the tree that appears. You are sorting by the process name.
--   Scroll down to the ``oracle.exe`` entries. There will be one for each database running on the server.
--   Find the correct ``oracle.exe`` for the problem PID that you noted above.
--   Double-click the correct ``oracle.exe`` process name.
+-	 Select view->show Process Tree, if necessary.
+-	 Select view->update speed and set it to 5 seconds, or longer, otherwise it refreshes too quickly and makes finding things difficult.
+-	 Click on the ``process`` header in the tree that appears. You are sorting by the process name.
+-	 Scroll down to the ``oracle.exe`` entries. There will be one for each database running on the server.
+-	 Find the correct ``oracle.exe`` for the problem PID that you noted above.
+-	 Double-click the correct ``oracle.exe`` process name.
 
 In the pop-up that appears, go to the ``Threads`` tab. Click OK if you get a pop-up telling
 you that something isn't as fully featured as it might need to be.
 
--   Click the ``CPU`` column, to sort by thread id. You might need to do this twice to get the list in the order that you want - highest at the top. This assumes the problem in CPU of course. Sadly, for Disk and Network problems, there's not much other useful information to be gained. It may take a few seconds for the list to refresh.
--   Note the ``TID`` of the thread with the highest CPU usage. However, watch for a few refreshes to see if it is the only one, or if others are also affecting performance. Note the ``TID``s for all, if necessary.
+-	 Click the ``CPU`` column, to sort by thread id. You might need to do this twice to get the list in the order that you want - highest at the top. This assumes the problem in CPU of course. Sadly, for Disk and Network problems, there's not much other useful information to be gained. It may take a few seconds for the list to refresh.
+-	 Note the ``TID`` of the thread with the highest CPU usage. However, watch for a few refreshes to see if it is the only one, or if others are also affecting performance. Note the ``TID``s for all, if necessary.
 
 Now you have the thread IDs for the affecting sessions, we need to use Toad or SQL*Plus to find the culprits in the database.
 
--   In the editor, run the following query:
+-	 In the editor, run the following query:
 
     ..  code-block:: sql
     
