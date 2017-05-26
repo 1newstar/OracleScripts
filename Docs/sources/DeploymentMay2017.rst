@@ -10,7 +10,8 @@ PreProd (ppdcfg)
 #.	Put the desired database in restricted mode.
 #.	The scripts are found on ``$/TA/MAIN/Non Source/Dev DBA/Database Release/Active/R804 May Release/R804_V01_P00_MayRel_db_release_master.zip`` - but this will vary, see "go-ahead" email for full details.
 #.	Copy the file on the server in ``F:\_devops\Releases\YYYYMon``.
-#.	After unzipping the file run ``sqlplus /nolog@R804_V01_P00_MayRel_db_release_master.sql`` on the desired database.
+#.	After unzipping the file run ``sqlplus /nolog @R804_V01_P00_MayRel_db_release_master.sql`` on the desired database *RUN AS FCS* user when prompted.
+#.  *Stop here if you are running on production, then see below.*
 #.	Check the logs.
 #.	Disable restricted session.
 #.	Do a schema compare between PRDUAT and PreProd.
