@@ -22,6 +22,7 @@ The outline of the processes to be followed are:
 
 -   Drop the staging database.
 -   Run a "non-target" RMAN ``duplicate`` while connected *only* to the auxiliary database, the staging database in other words.
+-   Update the ``LEEDS_CONFIG.DATABASE_INFORMATION`` table with the date of the backup we used.
 -   Clean up afterwards.
 
 
@@ -67,7 +68,18 @@ If the ``initAZSTG01.ora`` file contains more than the above, edit out everythin
 Restore the CFG Database Dumps
 ==============================
 
-To restore the database dumps as a new database, we simply run a ``DUPLICATE DATABASE ...`` command within RMAN, while connected *only* to the ``AZSTG01`` database as the auxiliary database:
+**URGENT** There is a bug/feature in Oracle ``RMAN`` whereby when a database is being cloned from a dump of another database, and the source database is running with block change tracking enabled, then there is an intermittent possibility that the ``alter database open resetlogs`` of the clone will fail, and much manual work will require to be done to resolve the problem.
+
+To clone the database you must:
+
+-   Start the ``RMAN`` clone, and wait for it to complete restoring the control files, and then mounting the database;
+-   Login to ``SQL*Plus`` as SYSDBA and disable block change tracking on the clone;
+-   Allow the ``RMAN`` clone to continue.
+
+Start the RMAN Clone
+--------------------
+
+To restore the database dumps as a new database, we simply run a ``DUPLICATE DATABASE ...`` command within ``RMAN``, while connected *only* to the ``AZSTG01`` database as the auxiliary database:
 
 ..  code-block:: none
 
@@ -76,38 +88,64 @@ To restore the database dumps as a new database, we simply run a ``DUPLICATE DAT
     startup nomount pfile='?\database\initAZSTG01.ora'
     exit
 
-    cd f:\builds\AZSTG01_REFRESH
+    cd /d f:\builds\AZSTG01_REFRESH
 
     rman AUXILIARY sys/password@azstg01
         
     @refresh_azstg01.rman
 
 
-**URGENT**: During the time that ``RMAN`` has opened the database in MOUNT mode, as it does when restoring the data files, you must login as SYSDBA to a separate ``SQL*Plus`` session and:
-    
-    ..  code-block:: sql
-    
-        alter database disable block change tracking;
-        
-    Otherwise the following will occur and the database will be trashed:
-    
-    ..  code-block:: none
-    
-        ORA-00283: recovery session canceled due to errors
-        ORA-19755: could not open change tracking file
-        ORA-19750: change tracking file: 'F:\MNT\FAST_RECOVERY_AREA\CFG\BCT.DBF'
-        ORA-27041: unable to open file
-        OSD-04002: unable to open file
-        O/S-Error: (OS 3) The system cannot find the path specified.
-        RMAN-00571: ===========================================================
-        RMAN-00569: =============== ERROR MESSAGE STACK FOLLOWS ===============
-        RMAN-00571: ===========================================================
-        RMAN-03002: failure of Duplicate Db command at 05/25/2017 14:33:46
-        RMAN-05501: aborting duplication of target database
+Urgently Disable Block Change Tracking
+--------------------------------------
 
-    See the "Fix for Block Change Tracking Problems" section below, for a fix for this problem. The database will not be able to be opened if the above error has occurred. You will also note that the file name mentioned is the file name for the production database. This is the cause of the problem. Also, the error doesn't *always* occur!
+If you monitor the execution of the ``RMAN`` script, you will see the following, shortly after it begins:
+
+..  code-block:: none
+
+    Starting restore at 2017/05/31 09:29:02
+    ...
+    channel x1: restoring control file
+    channel x1: restore complete, elapsed time: 00:00:14
+    output file name=G:\MNT\ORADATA\AZSTG02\CONTROL01.CTL
+    output file name=H:\MNT\FAST_RECOVERY_AREA\AZSTG02\CONTROL02.CTL
+    Finished restore at 2017/05/31 09:29:16
+
+    database mounted
+
+At this point, there is a useful delay while ``RMAN`` looks around the backup location to determine the correct files to use to clone the database. Now is the time to disable block change tracking.
+
+In a separate session, Toad etc, login to the staging database as SYSDBA and:
     
-    As long as you disable block change tracking, on the staging database being refreshed, *before* ``RMAN`` attempts to ``alter database open resetlogs``, you will be safe.
+..  code-block:: sql
+
+    alter database disable block change tracking;
+    select * from v$block_change_tracking;
+    
+You should now see that block change tracking is disabled on the staging database.    
+    
+If you neglect to do this step, there is a 50-50 chance that the following will occur after everything has completed:
+
+..  code-block:: none
+
+    ORA-00283: recovery session canceled due to errors
+    ORA-19755: could not open change tracking file
+    ORA-19750: change tracking file: 'F:\MNT\FAST_RECOVERY_AREA\CFG\BCT.DBF'
+    ORA-27041: unable to open file
+    OSD-04002: unable to open file
+    O/S-Error: (OS 3) The system cannot find the path specified.
+    RMAN-00571: ===========================================================
+    RMAN-00569: =============== ERROR MESSAGE STACK FOLLOWS ===============
+    RMAN-00571: ===========================================================
+    RMAN-03002: failure of Duplicate Db command at 05/25/2017 14:33:46
+    RMAN-05501: aborting duplication of target database
+
+See the "Fix for Block Change Tracking Problems" section below, for a fix for this problem. The database will not be able to be opened if the above error has occurred. You will also note that the file name mentioned is the file name for the production database. This is the cause of the problem. Also, the error doesn't *always* occur!
+
+As long as you disable block change tracking, on the staging database being refreshed, *before* ``RMAN`` attempts to ``alter database open resetlogs``, you will be safe.
+
+
+Continue the RMAN Clone
+-----------------------
 
 The ``refresh_azstg01.rman`` script does the hard work, and (currently) contains the following contents:
 
@@ -181,6 +219,23 @@ Post Restore Clean Up
 
 The following housekeeping tasks require attention after a refresh.
 
+Update Refresh Date Table
+-------------------------
+
+..  code-block:: sql
+
+    truncate table leeds_config.database_information;
+    insert into leeds_config.database_information values (to_date('some_date', 'yyyy/mm/dd');
+    commit;
+    
+In the above, ``some_date`` is a string showing the date of the backup that was used to restore the database. Normally, this is "yesterday" so you could use:
+
+..  code-block:: sql
+
+    insert into leeds_config.database_information values (trunc(sysdate)-1);
+    commit;
+
+However, if you restored from a specific database dump, please ensure you use that actual date instead.
 
 Production Service & Trigger
 ----------------------------
@@ -420,13 +475,14 @@ You must check with ``RMAN`` as to the settings of the parameters for the newly 
     configure backup optimization on;
     configure controlfile autobackup on;
     configure controlfile autobackup format for device type disk clear;
+    configure retention policy to redundancy 1;
     show all;
     
     # Check and adjust as appropriate, the remaining parameters.
     
     exit;
 
-You may wish to set a different location for the controlfile autobackups, as shown above. The default is to send them to the FRA for the database, into the ``autobackup`` folder.
+We have reset the location for the controlfile autobackups, as shown above. The default is to send them to the FRA for the database, into the ``autobackup`` folder.
 
 You will also need to register the database with the ``RMAN`` catalog [sic] if it is to be backed up.
 
