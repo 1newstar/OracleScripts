@@ -225,7 +225,7 @@ Update Refresh Date Table
 ..  code-block:: sql
 
     truncate table leeds_config.database_information;
-    insert into leeds_config.database_information values (to_date('some_date', 'yyyy/mm/dd');
+    insert into leeds_config.database_information values (to_date('some_date', 'yyyy/mm/dd'));
     commit;
     
 In the above, ``some_date`` is a string showing the date of the backup that was used to restore the database. Normally, this is "yesterday" so you could use:
