@@ -685,6 +685,14 @@ Check also that there are no PERFSTAT jobs active. If there are, the solution is
 Clone Configuration
 -------------------
 
+The FCS password should be changed to a non-default one. Using KeePass, generate an Oracle specific password and change the password as follows:
+
+..  code-block:: sql
+
+    alter user fcs identified by <password_generated_in_KeePass>;
+
+Ensure that you synchronise KeePass after generating the new password, and adding it to the KeePass database.
+    
 After cloning any non-production *depersonalised* databases, we must run
 the following script – you may ignore any errors relating to dropping of
 objects. The script in question *must be run as the FCS user*, and is
@@ -753,6 +761,96 @@ following while logged in as SYS:
     /
 
     DROP PACKAGE pk_access_setup;
+
+
+Security Considerations
+=======================
+
+If the staging database used as the source was ``AZSTG01`` then this cloned database will contain personal data and access *must* be restricted. Only certain users will be permitted to access this database.
+
+To this end, all accounts, except those of 'the chosen ones' must be locked.
+
+The following script will lock all user accounts, except the standard Oracle ones - some of which will already be locked, expired or both, and the standard UV users that are required for the system to operate, and, finally, the supplied list of all the users permitted to use the system where personal data are still available. In the example, the users XXXX and YYYY, plus their AURA versions, can see the data but nobody else can.
+
+..  code-block:: sql
+
+    set lines 2000 pages 2000 trimspool on
+
+    set serverout on size unlimited
+
+    declare
+        vLockSql varchar2(200);
+        
+    begin
+        for x in (select username
+                  from   dba_users
+                  -- ===============================================
+                  -- LIST the username(s) here for the users you 
+                  -- wish TO BE ABLE to access the system.
+                  -- ===============================================
+                  where username not in (
+                    'XXXX', 
+                    'XXXX_AURA',
+                    'YYYY',
+                    'YYYY_AURA'
+                  )
+                  -- ===============================================
+                  -- These are all the standard Oracle users which
+                  -- we do not, ever, lock. This includes the UV
+                  -- accounts needed for the system to work too.
+                  -- ===============================================
+                  and username not in 
+                    ('ANONYMOUS',
+                    'APEX_030200',
+                    'APEX_PUBLIC_USER',
+                    'APPQOSSYS',
+                    'CTXSYS',
+                    'DBSNMP',
+                    'DIP',
+                    'EXFSYS',
+                    'FLOWS_FILES',
+                    'MDDATA',
+                    'MDSYS',
+                    'MGMT_VIEW',
+                    'OLAPSYS',
+                    'ORACLE_OCM',
+                    'ORDDATA',
+                    'ORDPLUGINS',
+                    'ORDSYS',
+                    'OUTLN',
+                    'OWBSYS',
+                    'OWBSYS_AUDIT',
+                    'PERFSTAT',
+                    'SI_INFORMTN_SCHEMA',
+                    'SPATIAL_CSW_ADMIN_USR',
+                    'SPATIAL_WFS_ADMIN_USR',
+                    'SYS',
+                    'SYSMAN',
+                    'SYSTEM',
+                    'WMSYS',
+                    'XDB',
+                    'XS$NULL',
+                    'CMTEMP',
+                    'FCS',
+                    'ITOPS',
+                    'LEEDS_CONFIG',
+                    'ONLOAD',
+                    'OEIC_RECALC',
+                    'UVSCHEDULER')
+        ) loop
+            vLockSql := 'alter user ' || x.username || ' account lock';
+                  
+            begin
+                --dbms_output.put_line('ABOUT TO: ' || vLockSql);        
+                execute immediate vLockSql;
+            exception
+                when others then
+                    dbms_output.put_line('FAILED TO: ' || vLockSql);
+            end;
+        end loop;
+    end;
+    /
+
 
 
 Register Database in RMAN
