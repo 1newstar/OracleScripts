@@ -112,7 +112,7 @@ If you monitor the execution of the ``RMAN`` script, you will see the following,
 
     database mounted
 
-At this point, there is a useful delay while ``RMAN`` looks around the backup location to determine the correct files to use to clone the database. Now is the time to disable block change tracking.
+At this point, there is a useful delay while ``RMAN`` reads data from the restored controlfile to enable it to determine the correct backup(s) and files to use to clone the database. Now is the time to disable block change tracking.
 
 In a separate session, Toad etc, login to the staging database as SYSDBA and:
     
@@ -423,6 +423,21 @@ We do not want, or need the production database links in a staging database used
     drop public database link CFGTRAIN_LINK;
     drop public database link CFGSB_LINK;
     drop public database link CFGAUDIT_LINK;
+
+Update Parameters
+-----------------
+
+As restored, the staging database is now running with the startup parameters reflecting those of the production database. This should be changed to reduce the database's footprinit on the pre-production server.
+
+..  code-block:: sql
+
+    alter system set memory_target=4G scope=spfile;
+    alter system set memory_max_target=5G scope=spfile;
+    alter system set sga_target=2G scope=spfile;
+    alter system set sga_max_size=3G scope=spfile;
+    alter system set pga_aggregate_target=500M scope=spfile;
+    
+    startup force
     
 
 Depersonalisation
