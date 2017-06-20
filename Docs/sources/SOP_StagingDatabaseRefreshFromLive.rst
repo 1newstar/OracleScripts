@@ -127,7 +127,7 @@ If you neglect to do this step, there is a 50-50 chance that the following will 
 
 ..  code-block:: none
 
-    ORA-00283: recovery session canceled due to errors
+    ORA-00283: recovery session cancelled due to errors
     ORA-19755: could not open change tracking file
     ORA-19750: change tracking file: 'F:\MNT\FAST_RECOVERY_AREA\CFG\BCT.DBF'
     ORA-27041: unable to open file
@@ -479,7 +479,7 @@ This will execute the above partial depersonalisation first, then will depersona
 RMAN Backups
 ============
 
-You must check with ``RMAN`` as to the settings of the parameters for the newly restored database. It will currently reflect the ``CFG`` database and will need changing to match ``AZSTG01`` - even though this database is not normally backed up, we don't want it to impinge on production if we do decide to take an adhoc backup..
+You must check with ``RMAN`` as to the settings of the parameters for the newly restored database. It will currently reflect the ``CFG`` database and will need changing to match ``AZSTG01`` - even though this database is not normally backed up, we don't want it to impinge on production if we do decide to take an adhoc backup.
 
 ..  code-block:: none
 
@@ -551,7 +551,7 @@ The spfile is also incorrect, so we need a pfile to be generated so that we can 
     
 Edit the generated pfile and correct the ``DB_NAME`` parameter, and any others that still indicate the production database. You can ignore the various file_name_convert parameters though.
 
-Now we need to start the database in ``NOMOUNT`` mode, using the current, incorrect, spfile, and recreate the controlfiles:
+Now we need to start the database in ``NOMOUNT`` mode, using the *current, incorrect, spfile*, and recreate the controlfiles:
 
 ..  code-block:: sql
 
@@ -579,7 +579,7 @@ If Oracle says it is already mounted, you can ignore the error. Usually a databa
     
 If this works, then we will not need to recover the database. Proceed to the next section - adding back the temporary tablespace files.
 
-The database needs some further recovery, so for this we will need at least one archived log from the production server. To find out whihc one, we should attempt a recovery:
+The database needs some further recovery, so for this we will need at least one archived log from the production server. To find out which one, we should attempt a recovery:
 
 ..  code-block:: sql
 
@@ -590,7 +590,7 @@ Oracle will suggest an archived log to use to begin the recovery. Make a note of
 ..  code-block:: none
 
     ORA-00279: change 297591712 generated at 05/25/2017 03:39:27 needed for thread 1
-    ORA-00289: suggestion : H:\MNT\FAST_RECOVERY_AREA\AZSTG02\ARCHIVELOG\2017_05_25\O1_MF_1_13770_%U_.ARC
+    ORA-00289: suggestion : H:\MNT\FAST_RECOVERY_AREA\AZSTG01\ARCHIVELOG\2017_05_25\O1_MF_1_13770_%U_.ARC
     
 In the suggested file, Oracle wants sequence 13770 which was created on 25th may 2017. Cancel the recovery now.
 
@@ -600,9 +600,9 @@ In the suggested file, Oracle wants sequence 13770 which was created on 25th may
 
 It should be in upper case.
 
-We now need to exit from ``SQL*Plus`` and use ``RMAN`` to do the recovery. It is easier this way because the files we copy from production will not match exactly the randomly generated names give in the suggestion. ``SQL*Plus`` cannot cope with this, but ``RMAN`` can.
+We now need to exit from ``SQL*Plus`` and use ``RMAN`` to do the recovery. It is easier this way because the files we copy from production will not match exactly the randomly generated names given in the suggestion. ``SQL*Plus`` cannot cope with this, but ``RMAN`` can.
 
-On the *production* server, locate the FRA for the database, and the archivelog folder that matches the date suggested by the previous recover attempt that we cancelled. Find the appropriate archived log file with the desired sequence number, and copy that, plus the next 4 sequential logs from production to the FRA for the staging database, into a folder on the staging server, with the same name as that on the suggested filename mentioned above - usually yyyy-mm-dd.
+On the *production* server, locate the FRA for the database, and the ``archivelog`` folder that matches the date suggested by the previous recover attempt that we cancelled. Find the appropriate archived log file with the desired sequence number - 13770 in this example - and copy that, plus the next 4 sequential logs (13771 - 13774) from production to the FRA for the staging database, into a folder on the staging server, with the same name as that on the suggested filename mentioned above - usually yyyy-mm-dd.
 
 In ``RMAN`` attempt a recovery. You will not need to rename the 5 copied archived logs. RMAN will find the correct ones, note the file names as they are, and apply them.
 
@@ -615,7 +615,7 @@ In ``RMAN`` attempt a recovery. You will not need to rename the 5 copied archive
         recover database using backup controlfile;
     }
     
-In the above, 'nnnn' is *one higher* than the highest sequence of the archived logs you copied from the production server. Once the recovery is done, attempt to open the database:
+In the above, 'nnnn' is *one higher* than the highest sequence of the archived logs you copied from the production server - 13775 in this example. Once the recovery is done, attempt to open the database:
     
 ..  code-block:: none
 
@@ -646,7 +646,7 @@ In ``SQL*Plus`` as the SYSDBA user again, we need to add the TEMP tablespace's f
 Create the Spfile
 -----------------
 
-The database is currently running with a pfile. We need to recreate a corrected spfile from this pfile:
+The database is currently running with an incorrect spfile. We need to create a new spfile from the temporary pfile we created earlier:
 
 ..  code-block:: sql
 
@@ -654,10 +654,18 @@ The database is currently running with a pfile. We need to recreate a corrected 
     
 
 Restart the Database
---------------------    
+--------------------
+
+The database should now be able to be restarted with the newly created spfile:
     
 ..  code-block:: sql
 
     startup force;
     
-The database is now ready for use, and for the post clone tidy up to be carried out. See above for details.    
+The temporary pfile can be deleted:
+
+..  code-block:: none
+
+    del %oracle_home%\database\initTEMP.ora;
+    
+The database is now ready for use, and for the post clone tidy up to be carried out. See above for details. 
