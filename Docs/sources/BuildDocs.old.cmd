@@ -114,7 +114,7 @@ rem Build a docx file.
 :build_docx
     echo Building %DOCUMENT%.docx from %DOCUMENT%.rst - please wait ....
     echo.
-    pandoc --from rst --to docx -o %DOCUMENT%.docx --toc --toc-depth=3 --reference-docx=..\pandoc_reference.docx %DOCUMENT%.rst 
+    pandoc --from rst --to docx -o %DOCUMENT%.docx --toc --toc-depth=4 --reference-docx=..\pandoc_reference.docx %DOCUMENT%.rst 
 
     set RESULT=%ERRORLEVEL%
     if "%ERRORLEVEL%" NEQ "0" (
@@ -132,7 +132,7 @@ rem Build a pdf file.
     echo Link colours will be %COLOUR% ...
     echo.
 
-    pandoc -f rst -t latex -o %DOCUMENT%.pdf --toc --toc-depth=3 %DOCUMENT%.rst --variable fontfamily="utopia" --listings -H ..\listings_setup.tex --variable toccolor="%TOCCOLOUR%" --variable linkcolor="%LINKCOLOUR%" --variable urlcolor="%URLCOLOUR%" --variable margin-top=2.5cm --variable margin-left=2.5cm --variable margin-right=2.5cm --variable margin-bottom=3.5cm
+    pandoc -f rst -t latex -o %DOCUMENT%.pdf --toc --toc-depth=4 %DOCUMENT%.rst --variable fontfamily="utopia" --listings -H ..\listings_setup.tex --variable toccolor="%TOCCOLOUR%" --variable linkcolor="%LINKCOLOUR%" --variable urlcolor="%URLCOLOUR%" --variable margin-top=2.5cm --variable margin-left=2.5cm --variable margin-right=2.5cm --variable margin-bottom=3.5cm
 
     set RESULT=%ERRORLEVEL%
 
@@ -205,7 +205,7 @@ rem Give me help!
     echo       BlueViolet, BrickRed, Brown, brown,  BurntOrange, 
     echo    C: CadetBlue, CarnationPink, Cerulean, CornflowerBlue, 
     echo       Cyan, cyan, 
-    echo    D: Dandelion, darkgray, darkgray, DarkOrchid, 
+    echo    D: Dandelion, darkgray, darkgrey, DarkOrchid, 
     echo    E: Emerald, 
     echo    F: ForestGreen, Fuchsia, 
     echo    G: Goldenrod, Gray, gray, Grey, Green, green, GreenYellow, 
