@@ -11,7 +11,7 @@ The following details are applicable to Toad version 12.1.0.22 as this is the cu
 Overview
 ========
 
-The Trace File Browser, in Toad, is accessed from the ``Database -> Diagnose -> Trace File Browser`` menu option. It allows the DBA/Developer the ability to open a trace file either locally, on the database server or via FTP from a remote server, and analyse the contents.
+The Trace File Browser, in Toad, is accessed from the ``Database -> Diagnose -> Trace File Browser`` menu option. It allows the DBAs and/or Developers the ability to open a trace file either locally, on the database server or via FTP from a remote server, to analyse the contents.
 
 The raw trace file can be opened in the default external editor if the DBA wishes to consult the raw data in its entirety. The default external editor is set up in toad using ``View -> Toad Options``, click ``Executables`` on the left side and on the right side, you will find a button to assist you to define whichever external editor you wish to use. Or, there's always ``notepad`` I suppose!
 
@@ -160,8 +160,8 @@ The right-click context menu in this tab offers the following options:
 -   **Expand All** - expands all SQL statements with recursive SQL to display all the recursive statements.
 -   **Collapse All** - collapses and hides all the recursive statements. Only a '+' is shown to indicate which top level statements have recursive SQL statements.
 -   **Include Percentages** - displays, or otherwise, the percentage of the total of some counter, that the current statement consumed. For example, a statement may have taken 0.001865 seconds to process (parse, exec, fetch, wait etc) - the percentage shown is the percentage of the whole trace file that this small period of time made up. 
--   **Fix Statement Column** - **??????????????????**
--   **Display Full Recursion** - **??????????????????**
+-   **Fix Statement Column** - if checked, the Statement column will be fixed to the left hand side of the window, so that you can always see it if you scroll horizontally to look at the columns that are off to the far right if the display.
+-   **Display Full Recursion** - if checked, recursive statements are nested in the tree under their *parent* statements (so you could have multiple levels of nesting).   If unchecked, recursive statements all go directly under the *user* statement in the tree.  
 
 Wait Summary
 ============
@@ -207,6 +207,9 @@ In the lower part, double-click a statement to open in in the 'Statement Details
 If you have selected a session to 'Query database to decode object IDs' on the 'Statement Details' tab, then the first column here will show the object details as opposed to an object_id.
 
     **Bug?**: Sorting by object_id, when decoding is not in effect, sorts by the *textual* representation of the object_ids, as opposed to by their *numeric* values. So, 4, 40, 400 etc would appear together.
+    
+    **Bug Fix**: Resolved in Toad Beta. Will be in the next Toad GA release. (Current date is 23 June 2017).
+    
 
 Options
 -------
@@ -241,6 +244,8 @@ There is a wealth of detail in this part of the tab. It displays such items as:
 -   Etc.
 
     **Bug?** I have noticed a few trace files do not get their last timestamp listed, even though it does exist in the file. Toad simply states *<no timestamps in file>* for these traces. Hmm.
+    
+    **Bug Fix**: Fixed in Toad version 12.11.
 
 This section of the display has a lot of helpful and useful information. 
 
@@ -294,6 +299,8 @@ You may right-click on the graph and choose to:
 -   **Display User and Recursive Statements Separately** - splits the graph to show separately, the user and recursive statements for each time/count range. 
 
     **Bug?** This latter option shows a possible bug. When the separate images are being graphed, some of the bars in the graph do not display a (full) list of statements until the images are combined again. I've seen 4 statements show as a completely empty list, and 7 statements show as a single statement in the list. When combined, all statements display correctly.
+    
+    **Bug Fix**: Fixed in Toad version 12.11.
 
 Statements List
 ---------------
@@ -391,6 +398,8 @@ Bind Details
 If the highlighted statement has any bind variables, they are displayed here, with the values used by this execution of the statement. This are will be blank if the statement has no binds.
 
     **Bug?**: Sometimes the display shows 'NULL' for some (NUMBER?) bind variables and at other times, correctly shows the values. This is a problem in 12.1.0.22 and may be fixed in later versions.
+    
+    **Bug Fix**: Fixed in Toad version 12.11. Just my luck to be behind the times and stuck on 12.1!
 
 Statement Text
 --------------
@@ -643,13 +652,147 @@ The right-click context menu in this tab offers the following options:
 -   **Send to Excel** - the wait details are exported directly to Excel.
 -   **Expand All** - expand all the various sections above in the display.
 -   **Collapse All** - collapse all the sections in the display.
+   
+****************
+A Worked Example
+****************
 
-    **Bug?**: the latter two options do appear, in 12.1.0.22, to be rather slow, even for a small trace file. 
+What happens when you drop a table? How exactly does Oracle go about cleaning up all the triggers, indexes, constraints etc that may exist on that table? Read on.
+
+As the SYS user, I set up a user, **norman** with the following code:
+
+..  code-block:: sql
+
+    create user norman identified by norman;
+
+    grant create session to norman;
+
+    grant create table to norman;
+
+    grant create sequence to norman;
+
+    grant create trigger to norman;
+
+    grant create view to norman;
+
+    grant execute on sys.dbms_monitor to norman;
+
+    grant alter session to norman;
+
+    alter user norman default tablespace users quota unlimited on users;
+
+I then logged in as the norman user, and ran the following commands:
+
+..  code-block:: sql
+
+    create table norman( a number, b date, c varchar2(10));
+
+    alter table norman add constraint norman_pk primary key(a);
+
+    create sequence norman_pk_seq maxvalue 999999999 order nocycle;
+
+    create or replace trigger norman.norman_pk_trg
+    before insert
+    on norman.norman
+    for each row
+    begin
+        if (:new.a is null) then
+            select norman_pk_seq.nextval into :new.a from dual;
+        end if;
+
+    end norman_pk_trg;
+    / 
+       
+    create or replace force view norman_view
+    (
+       some_date,
+       some_text
+    )
+    as
+         select b as some_date, c as some_text
+           from norman
+       order by b desc;
+
+    comment on table norman.norman_view is 
+    'this is a comment for a view. The view is norman_view.';
+
+    comment on column norman.norman_view.some_date is 
+    'just a date of some kind.';
+
+    comment on column norman.norman_view.some_text is 'a little text.';   
+
+I didn't bother adding any data to the table, I simply started a trace, and dropped the table, as follows:
+
+..  code-block:: sql
+
+    alter session set tracefile_identifier='DROP_TABLE';
     
-    It appears that once you select one of these two options, you have to click somewhere *outside of Toad* to actually get a response from the tab itself! Of course, this *could* simply be a Windows 7 foible!
+    begin
+        dbms_monitor.session_trace_enable (
+          waits => TRUE,
+          binds => TRUE);
+    end;
+    /
+
+    drop table norman.norman cascade constraints purge;  
+
+    alter session set tracefile_identifier='DROP_TABLE';
+    begin
+        dbms_monitor.session_trace_disable;
+    end;
+    /    
+
+So what happened? Tracing a session is a great way to find out *exactly* what Oracle did. You can also see *exactly* where the response time encountered by the users, was spent.
+
+Open the trace file browser and load the trace file. Normally, Toad will display the first tab on the upper part of the display, the *Statement Details* tab. Mine looks like this:
+
+..  image:: images/StatementDetails.png
+    :alt: Image of the Statement Details tab.
+    :align: center
+
+Normally, when trying to determine what is causing a long response time, we would have a look at the *Wait Summary* and/or *Waits by Object* tabs to see what was causing the holdup, but in this case we are more interested in what Oracle did. However, feel free to check the tabs for your own interest.
+
+Looking at the *Rec Stmts* column, we see that the ``drop table`` statement carried out 146 recursive statements, just to drop a single table. Actually, it did a lot more than that as you will see if you turn on the right-click option, *Display Full Recursion* - mine jumps to 687 statements now! Best we turn it off again!
+
+Make sure that the tick box for *Query database to decode object IDs* is ticked, select the appropriate database connection when prompted, or create a new one. (You *might* need to be SYS here though...) - this helps when looking at the various objects involved in waits and such like.
+    
+As we are interested in the ``drop table`` statement, select it in the upper part of the display, and on the lower part, click onto the *Waits* tab. The figures displayed are for the ``drop table`` statement *plus all the times etc for the recursive statements involved in dropping the table*. Mine looks like this:
+
+..  image:: images/DropTableWaits.png
+    :alt: Image of the Drop Table waits summary.
+    :align: center
+
+Performance here was not too bad, considering all that Oracle did - only waited for 0.016722 seconds to do the log file sync (commit), then an additional 2 microseconds (2 millionths of a second) to tell me that it was done! 
+
+    **Note**: The object IDs here are all -1. This simply means that there are no specific objects involved in these waits.
+
+You may be aware that when you run any DDL statement, create, drop, alter etc, then Oracle will execute a ``COMMIT`` which will commit all your current uncommitted transactions - this is why you never ever mix DDL and DML in the same script - once you've done the DDL, any DML is committed and cannot be rolled back.
+
+Back in the upper section, on the *Statement Details* tab again, it's looking a bit too cluttered for my likings. I'm only really interested in what Oracle ended up ``DELETE``ing to do the actual ``drop table``, so, lets filter out everything that I'm not interested in.
+
+Enter the text ``*DELETE*`` (letter case is not significant here) into the ``filter by query text`` edit box and press enter. The *Statement Details* tab filters out everything that either:
+
+-   Does not have the text ``DELETE`` in it's statement; or
+-   Is not a parent of a statement with ``DELETE`` in its text.
+
+We are left with the ``drop table`` statement (the parent) and all the recursive statements containing the text ``DELETE`` in upper, lower or mixed case.
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
 -------
     
 | Author: Norman Dunbar
 | Email: Norman@dunbar-it.co.uk
-| Last Updated: June 23 2017
+| Last Updated: June 26 2017
