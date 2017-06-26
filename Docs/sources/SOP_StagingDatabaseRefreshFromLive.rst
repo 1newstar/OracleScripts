@@ -402,6 +402,17 @@ If there is an error that *you cannot drop a user that is connected* then the ab
     startup 
     drop user perfstat cascade;
 
+For all non-production databases, disable the SYS owned jobs that should only be running on production:
+
+..  code-block:: sql
+
+    begin
+        dbms_scheduler.disable(name => 'SYS.AUDIT_ARCHIVING', force => true);
+        dbms_scheduler.disable(name => 'SYS.EXPIRE_PASSWORDS', force => true);
+        dbms_scheduler.disable(name => 'SYS.UTMSODRM', force => true);
+    end;
+    /
+    
 
 Change Passwords
 ----------------
