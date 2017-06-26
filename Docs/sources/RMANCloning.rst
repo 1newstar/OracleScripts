@@ -659,19 +659,20 @@ For all non-production databases, there should be no jobs owned by FCS in the li
 ..  code-block:: sql
 
     begin
-        dbms_scheduler.disable(name => 'FCS.ALERTS_HEARTBEAT');
-        dbms_scheduler.disable(name => 'FCS.CLEARLOGS');
-        dbms_scheduler.disable(name => 'FCS.JISA_18BDAY_CONVERSION');
+        dbms_scheduler.disable(name => 'FCS.ALERTS_HEARTBEAT', force => true);
+        dbms_scheduler.disable(name => 'FCS.CLEARLOGS', force => true);
+        dbms_scheduler.disable(name => 'FCS.JISA_18BDAY_CONVERSION', force => true);
     end;
+    /
     
 For all non-production databases, disable the SYS owned jobs that should only be running on production:
 
 ..  code-block:: sql
 
     begin
-        dbms_scheduler.disable(name => 'SYS.AUDIT_ARCHIVING');
-        dbms_scheduler.disable(name => 'SYS.EXPIRE_PASSWORDS');
-        dbms_scheduler.disable(name => 'SYS.UTMSODRM');
+        dbms_scheduler.disable(name => 'SYS.AUDIT_ARCHIVING', force => true);
+        dbms_scheduler.disable(name => 'SYS.EXPIRE_PASSWORDS', force => true);
+        dbms_scheduler.disable(name => 'SYS.UTMSODRM', force => true);
     end;
     /
     
