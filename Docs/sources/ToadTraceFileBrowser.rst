@@ -653,11 +653,21 @@ The right-click context menu in this tab offers the following options:
 -   **Expand All** - expand all the various sections above in the display.
 -   **Collapse All** - collapse all the sections in the display.
    
-****************
-A Worked Example
-****************
+***********************
+A Simple Worked Example
+***********************
 
-What happens when you drop a table? How exactly does Oracle go about cleaning up all the triggers, indexes, constraints etc that may exist on that table? Read on.
+Introduction
+============
+
+Have you ever wondered what Oracle has to do when you do something relatively simple, like dropping a table? How exactly does Oracle go about cleaning up all the triggers, indexes, constraints, dependencies etc that may exist on that table? Read on.
+
+This analysis is purely for interest sake, I'm not interested in solving a performance problems here. That comes later. (See below.)
+
+The trace file is ``Droptable.trc``.
+
+Creating the Objects
+--------------------
 
 As the SYS user, I set up a user, **norman** with the following code:
 
@@ -721,6 +731,9 @@ I then logged in as the norman user, and ran the following commands:
 
     comment on column norman.norman_view.some_text is 'a little text.';   
 
+Dropping the Table
+------------------
+
 I didn't bother adding any data to the table, I simply started a trace, and dropped the table, as follows:
 
 ..  code-block:: sql
@@ -742,7 +755,13 @@ I didn't bother adding any data to the table, I simply started a trace, and drop
     end;
     /    
 
+Trace Analysis
+==============
+
 So what happened? Tracing a session is a great way to find out *exactly* what Oracle did. You can also see *exactly* where the response time encountered by the users, was spent.
+
+Load the Trace File
+-------------------
 
 Open the trace file browser and load the trace file. Normally, Toad will display the first tab on the upper part of the display, the *Statement Details* tab. Mine looks like this:
 
@@ -750,9 +769,12 @@ Open the trace file browser and load the trace file. Normally, Toad will display
     :alt: Image of the Statement Details tab.
     :align: center
 
-Normally, when trying to determine what is causing a long response time, we would have a look at the *Wait Summary* and/or *Waits by Object* tabs to see what was causing the holdup, but in this case we are more interested in what Oracle did. However, feel free to check the tabs for your own interest.
+Normally, when trying to determine what is causing a long response time, we would have a look at the *Wait Summary* and/or *Waits by Object* tabs to see what was causing the hold up, but in this case we are more interested in what Oracle did. However, feel free to check the tabs for your own interest.
 
 Looking at the *Rec Stmts* column, we see that the ``drop table`` statement carried out 146 recursive statements, just to drop a single table. Actually, it did a lot more than that as you will see if you turn on the right-click option, *Display Full Recursion* - mine jumps to 687 statements now! Best we turn it off again!
+
+Decode Object IDs
+-----------------
 
 Make sure that the tick box for *Query database to decode object IDs* is ticked, select the appropriate database connection when prompted, or create a new one. (You *might* need to be SYS here though...) - this helps when looking at the various objects involved in waits and such like.
     
@@ -768,28 +790,244 @@ Performance here was not too bad, considering all that Oracle did - only waited 
 
 You may be aware that when you run any DDL statement, create, drop, alter etc, then Oracle will execute a ``COMMIT`` which will commit all your current uncommitted transactions - this is why you never ever mix DDL and DML in the same script - once you've done the DDL, any DML is committed and cannot be rolled back.
 
-Back in the upper section, on the *Statement Details* tab again, it's looking a bit too cluttered for my likings. I'm only really interested in what Oracle ended up ``DELETE``ing to do the actual ``drop table``, so, lets filter out everything that I'm not interested in.
+Filter Out the Dross
+--------------------
 
-Enter the text ``*DELETE*`` (letter case is not significant here) into the ``filter by query text`` edit box and press enter. The *Statement Details* tab filters out everything that either:
+Back in the upper section, on the *Statement Details* tab again, it's looking a bit too cluttered for my liking. I'm only really interested in what Oracle ended up ``DELETE``ing to do the actual ``drop table``, so, lets filter everything and keep only those statements with the word 'DELETE' somewhere in the text.
 
--   Does not have the text ``DELETE`` in it's statement; or
--   Is not a parent of a statement with ``DELETE`` in its text.
+Enter the text ``*DELETE*`` (letter case is not significant here) into the ``filter by query text`` edit box and press enter. The *Statement Details* tab filters the SQL Statements present in the trace file, to only show those which have the word 'DELETE' somewhere in the statement text. For PL/SQL statements, this can be in a comment.
 
-We are left with the ``drop table`` statement (the parent) and all the recursive statements containing the text ``DELETE`` in upper, lower or mixed case.
+Note that the listed SQL Statements will include:
 
+-   All statements with 'DELETE' anywhere in the text, be this in a comment, the code or elsewhere;
+-   All statements with 'DELETEIONS' in the text - because although 'DELETEIONS' is a spelling mistake, it *does* contain the word 'DELETE'! ;-)
+-   Any statement with 'DELETES', 'DELETED' etc present in the text.
+-   Letter case is not significant.
+
+We are now left with the ``drop table`` statement (the parent) and all the recursive statements containing the text ``DELETE`` in upper, lower or mixed case.
+
+..  image:: images/DeleteFilteredSQL.png
+    :alt: Image of the filteres SQL statements.
+    :align: center
     
+And now I'm free to have a look around at all the data that Oracle dropped for me, just to run a single ``drop table`` statement.
+
+*******************************    
+Sorting Out a Performance Issue
+*******************************    
+
+Introduction
+============
+
+I have a query, which I borrowed, stole or wrote by myself, to interrogate the free space in a database for both normal data tablespaces and also to work out what available space there is in the TEMP tablespace(s) too. On some databases it seems to run for about 30 seconds, while on others it runs pretty much instantly. Why the difference?
+
+The trace file is ``FreeSpace.trc``.
+
+The Problem Query
+=================
+
+This is the query that's giving me problems, I've wrapped in in an ``alter session`` and a couple of calls to ``dbms_monitor`` to get a trace file created.:
+
+..  code-block:: sql
+
+    alter session set tracefile_identifier = 'FREESPACE';
+
+    begin
+        dbms_monitor.session_trace_enable(waits => true, binds => true);
+    end;
+    /
+        
+    -- Work out tablespace sizes, usages and free space.
+    -- Works on 9i and above.
+    -- 
+    -- Tablespaces at the top of the list need attention most.
+    -- Anything over 80% is a warning, 90% is getting critical.
+    --
+    -- Norman Dunbar.
+    with
+    space_size as (
+        select  tablespace_name,
+                count(*) as files, 
+                sum(bytes) as bytes,
+                sum(
+                    case autoextensible
+                    when 'YES' then maxbytes
+                    else bytes 
+                    end
+                ) as maxbytes
+        from    dba_data_files
+        group   by tablespace_name
+    ),
+    --
+    free_space as (
+        select  tablespace_name, sum(bytes) as bytes
+        from    dba_free_space
+        group   by tablespace_name
+    )
+    --
+    select  s.tablespace_name, 
+            s.files as data_files,
+            round(s.bytes/1024/1024, 2) as size_mb,
+            round(nvl(f.bytes, 0) /1024/1024, 2) as free_mb,
+            round((nvl(f.bytes, 0) * 100 / s.bytes), 2) as free_pct,
+            round((s.bytes - nvl(f.bytes, 0))/1024/1024, 2) as used_mb,
+            round((100 - (nvl(f.bytes, 0) * 100 / s.bytes)), 2) as used_pct,        
+            round(s.maxbytes/1024/1024, 2) as max_mb,
+            round((nvl(s.bytes, 0) * 100 / s.maxbytes), 2) as size_pct_max,
+            round((nvl(f.bytes, 0) * 100 / s.maxbytes), 2) as free_pct_max,
+            round((s.bytes - nvl(f.bytes, 0)) * 100 / s.maxbytes, 2) as used_pct_max        
+    from    space_size s
+    left join free_space f
+    on      (f.tablespace_name = s.tablespace_name)
+    --
+    union all
+    --
+    -- Get actual TEMP usage as opposed to DBA_FREE_SPACE figures.
+    select  h.tablespace_name,
+            count(*) data_files,
+            --
+            round(sum(h.bytes_free + h.bytes_used) / 1048576, 2) as size_mb,
+            --
+            round(sum((h.bytes_free + h.bytes_used) - nvl(p.bytes_used, 0)) / 
+            1048576, 2) as free_mb,
+            --
+            round((sum((h.bytes_free + h.bytes_used) - nvl(p.bytes_used, 0)) / 
+            sum(h.bytes_used + h.bytes_free)) * 100, 2) as  Free_pct,
+            --
+            round(sum(nvl(p.bytes_used, 0))/ 1048576, 2) as used_mb,
+            100 - round((sum((h.bytes_free + h.bytes_used) - 
+            nvl(p.bytes_used, 0)) / 
+            sum(h.bytes_used + h.bytes_free)) * 100, 2) as  used_pct,
+            --
+            round(sum(decode(f.autoextensible, 
+                             'YES', f.maxbytes, 
+                             'NO', f.bytes) / 
+            1048576), 2) as max_mb,
+            --
+            round(sum(h.bytes_free + h.bytes_used) * 100 / 
+            sum(decode(f.autoextensible, 
+                       'YES', f.maxbytes, 
+                       'NO', f.bytes)), 2) as  size_pct_max,
+            --
+            round(sum((h.bytes_free + h.bytes_used) - 
+            nvl(p.bytes_used, 0)) * 100 / 
+            sum(decode(f.autoextensible, 
+                       'YES', f.maxbytes, 
+                       'NO', f.bytes)), 2) as  free_pct_max,
+            --
+            round(sum(nvl(p.bytes_used, 0)) * 100 / 
+            sum(decode(f.autoextensible, 
+                       'YES', f.maxbytes, 
+                       'NO', f.bytes)), 2) as  used_pct_max
+            --
+    from    sys.v_$TEMP_SPACE_HEADER h,
+            sys.v_$Temp_extent_pool p,
+            dba_temp_files f 
+    where   p.file_id(+) = h.file_id
+    and     p.tablespace_name(+) = h.tablespace_name
+    and     f.file_id = h.file_id
+    and     f.tablespace_name = h.tablespace_name
+    group   by h.tablespace_name
+    --
+    order   by used_pct_max desc;
+
+    begin
+        dbms_monitor.session_trace_disable;
+    end;
+
+
+Trace Analysis
+==============
+
+Load the Trace File
+-------------------    
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+Once the trace file had been opened in the trace file browser and Toad had displayed the *Statement Details* tab, I clicked on the *Wait Summary* tab to see the following:
+
+
+..  image:: images/WaitSummary.png
+    :alt: Image of the Wait Summary tab.
+    :align: center
+
+It looks obvious that we have problems reading blocks from disc, and possibly also getting a response back from the application, Toad in this case. (What else?). The biggest wait is ``db file sequential read``  So we need to concentrate on that first.
+
+You will notice from the image above that the event name is underlined and is blue. We can double click it to get the following:
+
+..  image:: images/DbFileSequentialRead.png
+    :alt: Hints and tips for db file sequential read wait events.
+    :align: center
+  
+That's helpful, it looks like we are pulling back data blocks one at a time for some reason. Or are we? 
+
+Query Summary
+-------------
+
+Switch to the *Query Summary* tab. Using the drop down, lets see where Oracle spent the longest times. Choose, if it's not already chosen, *Exec Time + Parse Time + Fetch Time + Wait Time* or, as I know it, *Response Time*.
+
+..  image:: images/ResponseTime.png
+    :alt: Image showing a serious response time problem.
+    :align: center
+  
+I see three potential problems, however, as it turns out, the first two are calls to ``dbms_output.get_lines`` so I'm not bothered by those. That leaves a single statement that took over 30 seconds to respond the one on the far right.
+
+Click the bar in the graph for the far right statement, and the culprit will appear beneath the graph. It's my ``with ...`` statement, as I suspected. Double-click the statemnt beneath the grapgh and Toad will open the *Statement Details* tab again, and select the offending statement in the list at the top of the display.
+
+Explain Plan
+------------
+
+Look at the explain plan. You may find it wise to close everything down - ``right-click -> Collapse All``. You should now see a single row. The *Time* column shows 28,665,421 micro seconds. 28.67 seconds in real money. That's about right for what I saw when I executed it.
+
+-   Click the '+' at the start of the line to open up again, one row appears - ``UNION-ALL``. A similar time for this, so...
+-   Click the '+' at the start of the line, two rows appears - ``HASH JOIN OUTER`` and ``HASH GROUP BY``. The time for the latter is only 83,010 uSeconds, so no problems here. The time for the formet is 28,582,079 uSeconds, so we need to dive in there.
+-   Click the '+' at the start of the line for ``HASH JOIN OUTER`` to open it. Two ``VIEW`` rows appear. One has a 28,162,436 uSecond response time. 
+-   Click the '+' at the start of the line for the ``VIEW`` with the extreme time. One row appears - ``HASH GROUP BY``.
+-   Click that one too, to open it. That gives us ``VIEW  DBA_FREE_SPACE ``. Strangely, it has a time of 55,338,658. (55.3 seconds! Something wrong there methinks!)
+-   Keep on clicking on the section with the biggest times until, finally we reach the culprit: ``FIXED TABLE FULL X$KTFBUE `` with a 25,603,666 response time.
+
+You can open the rest up if you wish, but nothing comes close to the response time of that full scan.
+
+
+..  image:: images/ExplainPlan.png
+    :alt: Image showing the culprit.
+    :align: center
+
+Now, I know that we have regularly gathered stats on fixed objects and dictionary objects, so there's *obviously* something wrong? And being a X$ table, there's not much I can do - unless ...
+
+    *Insert delay here while I check Oracle Support...*
+
+Bugs!
+-----
+
+It seems we have a bug in 11.2.0.4. `Bug <https://support.oracle.com/epmos/faces/BugDisplay?_afrLoop=109163696075238&id=19125876&_afrWindowMode=0&_adf.ctrl-state=9eq93xdtt_165>`_ affects 11.20.4 on AIX on Power Systems, but this is Windows. The bug was logged on 30th June 2014, last updated on 26th June 2017, *and is not yet fixed!*
+
+Oracle say that:
+
+..  code-block:: none
+
+    PROBLEM:
+    --------
+    After applied the 11.2.0.4 patch set, the query from DBA_FREE_SPACE is slow.
+    Same query worked fast in 11.2.0.3.
+     
+    DIAGNOSTIC ANALYSIS:
+    --------------------
+    Reproduces on few customer databases where 11.2.0.4 patch set was applied.
+     
+    The problem is FTS on X$KTFBUE:
+     
+    7586544    7586544    7586544        FIXED TABLE FULL X$KTFBUE
+     
+    Gather stats does not help.
+    EXEC DBMS_STATS.gather_table_stats('SYS', 'X$KTFBUE');
+     
+    OPTIMIZER_FEATURES_ENABLE='11.2.0.3' does not help.
+     
+    Empty RECYCLEBIN$ does not help.
+     
+    The /*+ RULE */ hint does not help.
+
+I feel an SR coming on.
+
     
 -------
     
