@@ -7,6 +7,10 @@ Introduction
 
 Years of being a developer and a DBA has given me a few things that just about every vendor and/or developer *should* know about, but apparently do not. Hopefully this document will be taken in the spirit it was intended, and will provide a decent overview of things that vendors and developers *should* be aware of - before they get turned loose on *my* databases!
 
+==================================
+Database & Development Environment
+==================================
+
 How Does Your Database Work?
 ============================
 
@@ -14,21 +18,142 @@ A strange question perhaps? You'd be surprised at how many vendors and developer
 
 Even if nothing else, you won't be expecting your indexes to be rebuilt on a regular basis! [1]_
 
+Want to write a system that runs *on any database backend* as many vendors would have you believe? It's not going to happen, unless you use the lowest common denominator of features that *all* the prospective backend databases have. Or, if you develop using a language called `Uniface <https://www.uniface.com/>`_ which does allow numerous backends to be used, as it has *properly* written specific drivers for each supported database.
+
+Why should your customers not be able to make full use of all the database features that they have paid for, just so that you can sell your application to someone with a lesser featured database?
+
 How Does Your Development Language Work?
 ========================================
 
-You should already know this, but again, many don't. Local objects are created on the stack and deleted on exit. So if you are using a prepared statement and bind variables, don't make them local parameters in a function or procedure, make them member variable of the parent object.
+You should already know this, but again, many don't. 
+
+For example, (function) local objects are created on the stack and deleted on function exit. So if you are using a prepared statement and bind variables, don't make them local parameters in a function or procedure, make them member variables of the parent object.
+
+Provide Proper Error Messages
+=============================
+
+What's more helpful?
+
+..  code-block:: none
+
+    Cannot login to database.
+    
+Or:
+
+..  code-block:: none
+
+    Cannot login to database.
+    Database: PROD.
+    Username: XYZABC_ADMIN.
+    Error Code: ORA-01017.
+    Error Message: invalid username/password; logon denied
+    
+I would suggest the latter, and all the additional information is available, quite simply, from the database exception that was raised. Use the full information provided in the exception, to give the users and the support teams, who have to fix the problem, a fighting chance of fixing it efficiently.
+
+Autonomous Transactions
+=======================
+
+You have to carry out some processing. However, you find a problem that you must record in a logging table, but if the main transaction rolls back, the logging table entry also vanishes - and nobody will be able to find out exactly why the transaction failed. What to do?
+
+If you write a logging procedure (or packaged procedure) to do the actual logging, you can make it *autonomous* and it can happily ``COMMIT`` its ``INSERT`` into the logging table, without, affecting the transaction that is having problems!
+
+This is *exactly* what Oracle does when you select the ``NEXTVAL`` from a sequence.
+
+..  code-block:: sql
+
+    create or replace procedure logging(
+
+        pMessage in varchar2
+    )
+
+    as
+        pragma autonomous_transaction;
+
+    begin
+        insert into logging_table(what, when, who)
+        values (pMessage, sysdate, USER);
+        commit;
+
+    exception
+        when others then raise;
+            
+    end;
+    /   
+
+Now in your code this sort of things works:
+
+..  code-block:: sql
+
+    declare
+        action varchar2(100);
+        
+    begin
+        ...
+        action := 'Insert into some_table';
+        
+        insert into some_table
+        values (lots, of, stuff...);
+        ...
+        
+        action := 'Delete from other_table';
+        
+        delete from other_table
+        where id in (select id from some_table);
+        ...
+        
+        commit;
+
+    exception
+        when others then
+            logging(action);
+            
+            -- Re-raise the exception and thus, rollback.
+            raise;
+            
+    end;
+    
+Package Your Procedures
+=======================
+
+Always, or at least, where ever possible, use packages. Do not write stand alone functions or procedures.
+
+With a procedure or function, recompiling will be necessary whenever you make changes to the code. In this case, *everything* that calls your procedure or function will also become invalid. Invalid objects need to be recompiled before their next usage.
+
+Luckily, Oracle will notice an invalid object, and attempt to recompile it when it is accessed. If this works, all well and good, but this has an effect on performance, especially if there's a tree of dependencies on the code you changed.
+
+When you package up a procedure or function, you have two objects:
+
+-   The package *specification*:
+
+    ..  code-block:: sql
+    
+        create or replace package myPackage as ...
+        
+-   The package *body*:
+    ..  code-block:: sql
+    
+        create or replace package body myPackage as ...
+        
+Now, whenever you need to change the code, simply recompile the package body and *not* the package itself. By doing this, none of the other objects that depend on your package need to be invalidated and recompiled.
+
+You only ever need to recompile the package when you change the calling parameters of an existing procedure or function, or add (or remove) a new one.
+
+Also, when saving code developed in Toad or SQLDeveloper, always save the package and body as two separate files. Only ever offer the package for deployment:
+
+-   On first ever deployment, you need to compile the specification at lease once;
+-   When you have had to add new procedures or functions, remove existing ones, change the calling conventions etc.
+
 
 The Application is *not* the Only Way!
 ======================================
 
 Business rules, check constraints, etc, are required to be as close to the data as possible. What this means is simple. If you have to check that a column in a table is either 'Y' or 'N' or NULL, then you add a check constraint *to the database* - you *do not* put some checking code in the application as the *only* constraint check.
 
-The database can be accessed from the application, this is true, but the DBA can also access it directly, using scripts, Toad, SQL*Plus etc etc. So can the developers. What would the application do if it read some data from a sex column, expecting 'M' or 'F' or NULL, and found it had read a 'U' instead?
+The database can be accessed from the application, this is true, but the DBA can also access it directly, using scripts, Toad, SQL*Plus etc etc. So can the developers. What would the application do if it read some data from a sex column, expecting 'M' or 'F' or NULL, and found it had read a 'U' instead? Would it cope if the developers wrote it *knowing* that it - the application - only allowed NULL, 'M' or 'F' through when the data are entered?
 
-You *can* put the checks in the application, but these would be used only to prevent a round trip to the database with incorrect data, and perhaps to enable a better and more informative error message to be presented to the users.
+You *can* put the checks in the application *as well*, but these application checks should only be used to prevent a round trip to the database with incorrect data, and to enable a better and more informative error message to be presented to the users.
 
-Data are the most valuable thing to a business, not the application - those live and die, but the data lives on. Keep it safe, and clean.
+Data are the most valuable thing to a business, not the application - those live and die, but the data lives on. Keep it safe, keep it clean.
 
 
 SQL*Plus is Not Toad!
@@ -229,11 +354,12 @@ And there's no bad data in the table:
     F
     NULL FOUND
 
-Contention
-==========
+=================
+Contention Issues
+=================
 
-``SELECT For Update``
----------------------
+Select For Update
+=================
 Many applications execute code that resembles the following:
 
 ..  code-block:: sql
@@ -243,7 +369,7 @@ Many applications execute code that resembles the following:
     where something = some_value
     FOR UPDATE;
     
-This allows a user to pull up some data, in an application, then go outside for lunch, a comfort break, a ciggy or whatever, leaving other users stuck in a queue waiting for a ``COMMIT`` or ``ROLLBACK``. 
+This allows a user to pull up some data, in an application, then go outside for lunch, a comfort break, an eCiggy or whatever, leaving other users stuck in a queue waiting for a ``COMMIT`` or ``ROLLBACK``. 
 
 Why do they developers write this code? It's easy and it's lazy and it's called *pessimistic locking*. 
 
@@ -252,7 +378,7 @@ Pessimistic locking means that if anyone already has a row locked, then the ``SE
 There are numerous means of getting around the need to lock early, as pessimistic locking does, because an ideal application will lock late for best performance and one method is described at `this link <https://qdosmsq.dunbar-it.co.uk/blog/2009/01/lazy-developer-syndrome-and-rowids/>`_.
 
 Lock Table
-----------
+==========
 
 If you ever see code that resembles the following, run away!
 
@@ -263,9 +389,49 @@ If you ever see code that resembles the following, run away!
 If you have to lock a table, you are doing something seriously wrong in your code. Oracle need only lock the rows that you are ``UPDATE``ing, and does it very well, you don't need to lock the table. Oracle is *not* SQL Server! 
 
 Unindexed Foreign Keys
-----------------------
+======================
 
 See *Foreign Keys May Need Indexing* elsewhere for details.
+
+DeadLocks
+=========
+
+Oracle will detect a deadlock situation between two or more sessions, and choose one of the sessions at random, and rollback the *statement* with an ``ORA-00060 while waiting for resource`` error message.
+
+The application must be able to cope with this. Normally, it would trap the exception, carry out a ``ROLLBACK``, then retry the entire transaction - although you may wish to consider ``SAVEPOINT``s in your code - but it should also give up after a few attempts to prevent an endless loop, or drastically long response times.
+
+==========================
+General Performance Issues
+==========================
+
+Select Count(*) Into
+====================
+
+Many times you will see code, similar to the following, in a PL/SQL package:
+
+..  code-block:: sql
+
+    ...
+    select count(*)
+    into lvHowMany
+    from table_a
+    where some_condition;
+    
+    if (lvHowMany = 0) then
+        do_something();
+    else
+        do_something_else();
+    end if;
+    ...
+    
+The idea being to determine if a row exists, and if so, ``UPDATE`` it perhaps, while if it doesn't exist, ``INSERT`` it.    
+
+If so, then the `MERGE <http://docs.oracle.com/cd/E11882_01/server.112/e41084/statements_9016.htm#SQLRF01606>`_ statement will do that for you. Use that instead.
+    
+If you are only interested in there being a row or not, then use the `EXISTS <http://docs.oracle.com/cd/E11882_01/server.112/e41084/conditions012.htm#SQLRF52167>`_ statement.
+
+-   The ``SELECT COUNT`` statement will continue reading to the end of the table\ [3]_ as you are asking for a count of all rows meeting the ``WHERE`` clause conditions. 
+-   ``EXISTS`` will stop looking when it finds the first row meeting the ``WHERE`` clause conditions. This can help short circuit the query, but it depends on how far through the table scan it finds a matching row of course.
 
 Stop Parsing
 ============
@@ -298,13 +464,41 @@ Now, Oracle is actually free to ignore your hints, so no harm done? Well, perhap
 
 Just. Say. **NO**!
 
-ROWIDs Are Your Best Friend
+Rowids Are Your Best Friend
 ===========================
 
 Well, maybe not your *very* best friend, but they are fun. Check `this link <https://qdosmsq.dunbar-it.co.uk/blog/2009/01/rowids-are-fun/>`_ for details.
 
-``SELECT *`` is *not* Your Friend
-=================================
+Basically though, if you ``SELECT`` a row, or rows, and you know that you will be updating them soon, ``SELECT`` the rowid as well as the desired columns for each row. For example, instead of this code:
+
+..  code-block:: sql
+
+    select column_a, column_b, ...
+    from table_a
+    where some_condition;
+    
+Run this instead:
+    
+..  code-block:: sql
+
+    select rowid as ri,
+           column_a, column_b, ...
+    from table_a
+    where pk_column = 123;
+    
+When the ``UPDATE``s are ready to be done, run this code:
+
+..  code-block:: sql
+
+    update table_a
+    set column_a = new_value,
+        column_b = new_value    
+    where rowid = <previous_ri_value>;
+
+Doing this will mean that you miss out querying the pk_column's index again to be able to write the row back to the table with updated values - why bother looking up the rowid when you already have it?
+    
+Select * is *not* Your Friend
+=============================
 
 many are the application developers who:
 
@@ -334,28 +528,41 @@ If the application asks for only what it needs, then adding columns need not mea
 Bind Variables *Can* Stuff Things Up!
 =====================================
 
-Bind variable peeking. Works best after 11.2.
+When Oracle parses a query, it builds an execution plan on the first parse. This is a hard parse. If the same query is parsed again, then the existing execution plan will be used, this is a soft parse. So, a statement with bind variables, which is (wrongly) parsed every time it is executed, will see one hard parse and lots of soft parses\ [2]_\ .
 
-PL/SQL stuff with parameters etc, are bind variables.
+Up until Oracle 11g, this could cause problems because the bind values were not known at parse time, so the execution plan may not have been ideal. In addition, depending on the first set of binds used, the plan was then fixed for *all* executions and this can cause serious problems if the data are skewed as the first plan will be used always, regardless of it being the best plan of not.
 
-SQL Injection
-=============
+For example, given a query that hits a row of data in a huge table because the optimiser sees that the first bind used has exactly one row, an index will be used to fetch that one row. However, every subsequent execution returns hundreds of rows, the index will be used and it will not be the most efficient access method.
 
-Briefly:
-
--   Don't use hard coded literals taken from fields filled in by users in the application!
--   Always sanitise your user input.
--   Use PL/SQL packages to access data passed in from the users via the application.
-
-The latter will automatically create SQL statement with bind variables. SQL Injection is exceedingly difficult with binds.
-
-`Little Bobby Tables! <https://xkcd.com/327/>`_.
+From 11g, Oracle does *bind variable peeking* and if it thinks the plan should change - based on the bind values, it will generate a new plan, on the fly, to cater for the change required.
 
 Use Sequences not Tables
 ========================
 
+Sequences run in a separate (autonomous) transaction from the one you are running. This makes them ideal for numeric primary keys, sequence numbers etc.
+
+Some vendors want to make their systems "run on any database backend" so they have a sequences table instead. This, on Oracle, means that their system *cannot* be run with more than one user!
+
+The idea is to:
+
+-   Select the current number from the table for use;
+-   Write the current number plus one back to the sequences table;
+-   Do all the necessary work with the sequence number thus obtained;
+-   Commit everything.
+
+The above works perfectly as long as only one user is running. With multiple users, the problem is, Oracle does read consistency. *Everyone* who queries the sequences table sees *exactly the same sequence value* until such time as the (first) change is ``COMMIT``ted. This gives everyone the same number for the primary key, so we get PK Constraint violation errors at best, and if the application retries on a duplicate key, we have queues of people all waiting to get a unique value from the table.
+
+Another problem, if the first user decides to go for lunch, before ending the transaction, everyone else will hang on a Mode 3 enqueue waiting for the first session to ``COMMIT`` or ``ROLLBACK``.
+
 Indexes
 =======
+
+How does an index work?
+-----------------------
+
+When you use an index to look up a row in a table, Oracle takes the values supplied in the ``WHERE`` clause and checks the indexed column values, in the index, to find the rowid for the desired row. That tells it exactly where on disc the data are to be found.
+
+A row's rowid *never* changes\ [4]_\ . 
 
 Don't Over Index
 ----------------
@@ -397,107 +604,47 @@ However, `this PDF document <https://richardfoote.files.wordpress.com/2007/12/in
 Bitmap Indexes
 --------------
 
-OLTP do not use bitmap indexes. These are a data warehouse feature and should be used there and there only. The reason being that when you update a single row in a table, and the bitmap index has to be maintained, then *every single row* covered by the bitmap segment in question will be locked.
+OLTP (Online Transaction Processing) systems *must not* not use bitmap indexes. 
+
+These are a data warehouse feature and should be used there and there only. The reason being that when you update a single row in a table, and the bitmap index has to be maintained, then *every single row* covered by the bitmap segment in question will be locked.
 
 With a normal index, Oracle will only lock the row that was updated - and as you updated it, that row is already locked. One row versus potentially, thousands.
 
-Data Warehouses tend to be loaded overnight with new data, so having bitmaps is not such a major problem there.
+Data Warehouses tend to be loaded overnight with new data, so having bitmaps is not such a major problem there as the data are being loaded as new, so will add extra segments to the index, which is not going to affect existing rows.
 
-Autonomous Transactions
+
+=======================
+Security Considerations
 =======================
 
-You have to carry out some processing. However, you find a problem that you must record in a logging table, but if the main transaction rolls back, the logging table entry also vanishes - and nobody will be able to find out exactly why the transaction failed. What to do?
+Passwords
+=========
 
-If you write a logging procedure (or packaged procedure) to do the actual logging, you can make it *autonomous* and it can happily ``COMMIT`` its ``INSERT`` into the logging table, without, affecting the transaction that is having problems!
+Make sure that the application copes with the users' passwords expiring. Many databases use profiles to expire users' passwords after a certain time. Your application must cope with this and offer the user the ability to change their own password.
 
-This is *exactly* what Oracle does when you select the ``NEXTVAL`` from a sequence.
-
-..  code-block:: sql
-
-    create or replace procedure logging(
-
-        pMessage in varchar2
-    )
-
-    as
-        pragma autonomous_transaction;
-
-    begin
-        insert into logging_table(what, when, who)
-        values (pMessage, sysdate, USER);
-        commit;
-
-    exception
-        when others then raise;
-            
-    end;
-    /   
-
-Now in your code this sort of things works:
-
-..  code-block:: sql
-
-    declare
-        action varchar2(100);
-        
-    begin
-        ...
-        action := 'Insert into some_table';
-        
-        insert into some_table
-        values (lots, of, stuff...);
-        ...
-        
-        action := 'Delete from other_table';
-        
-        delete from other_table
-        where id in (select id from some_table);
-        ...
-        
-        commit;
-
-    exception
-        when others then
-            logging(action);
-            
-            -- Re-raise the exception and thus, rollback.
-            raise;
-            
-    end;
-    
-    
-Package Your Procedures
-=======================
-
-Always, or at least, where ever possible, use packages. Do not write stand alone functions or procedures.
-
-With a procedure or function, recompiling will be necessary whenever you make changes to the code. In this case, *everything* that calls your procedure or function will also become invalid. Invalid objects need to be recompiled before their next usage.
-
-Luckily, Oracle will notice an invalid object, and attempt to recompile it when it is accessed. If this works, all well and good, but this has an effect on performance, especially if there's a tree of dependencies on the code you changed.
-
-When you package up a procedure or function, you have two objects:
-
--   The package *specification*:
-
-    ..  code-block:: sql
-    
-        create or replace package myPackage as ...
-        
--   The package *body*:
-    ..  code-block:: sql
-    
-        create or replace package body myPackage as ...
-        
-Now, whenever you need to change the code, simply recompile the package body and *not* the package itself. By doing this, none of the other objects that depend on your package need to be invalidated and recompiled.
-
-You only ever need to recompile the package when you change the calling parameters of an existing procedure or function, or add (or remove) a new one.
-
-Also, when saving code developed in Toad or SQLDeveloper, always save the package and body as two separate files. Only ever offer the package for deployment:
-
--   On first ever deployment, you need to compile the specification at lease once;
--   When you have had to add new procedures or functions, remove existing ones, change the calling conventions etc.
+Hopefully, the database profile also has a password verification function to check for, and reject, ridiculous passwords!
 
 
+SQL Injection
+=============
+
+Briefly:
+
+-   Don't use hard coded literals taken from fields filled in by users in the application!
+-   Always sanitise your user input.
+-   Use PL/SQL packages to access data passed in from the users via the application.
+-   `Little Bobby Tables! <https://xkcd.com/327/>`_.
+
+The latter will automatically create SQL statement with bind variables. SQL Injection is exceedingly difficult with binds.
+
+Beware the Lost Update
+======================
+
+Security includes data security!
+
+If two sessions carry out updates to the same rows in a table, but at separate times so that the first user's ``UPDATE``s are fully ``COMMIT``ted when the subsequent changes are made, the data for the first user *may* be lost. 
+
+See `Lost Update <https://morpheusdata.com/blog/2015-02-21-lost-update-db>`_\ for full details.
 
 
 
@@ -507,4 +654,9 @@ Also, when saving code developed in Toad or SQLDeveloper, always save the packag
 | Email: norman@dunbar-it.co.uk
 | Last Updated: 26 June 2017.
 
+..  Footnotes:
+
 ..  [1] If you have to ask, you have to read the Concepts manual again!
+..  [2] Sadly that's what we *usually* see. What we *should* see is one hard parse, and many, many executions and no soft parses!
+..  [3] Actually, to the table's *high water mark* which may be a lot higher than the last row in the table. Try creating a huge table with multi-millions of rows, run a ``COUNT(*)`` and time it. ``DELETE`` all the rows and do another ``COUNT(*)``. Same time? Oracle reads *all* the blocks in a table, even empty ones in a full table scan. The ``TRUNCATE`` command moves the high water mark down as all the rows are deleted - that will improve table scan performance.
+..  [4] *Almost* never changes actually. If a table is exported (using ``exp`` or ``expdp``) then it will change when it is imported again. If an RMAN backup is restored, it will have exactly the same rowid as before. However, in normal conditions, a rowid never changes.
