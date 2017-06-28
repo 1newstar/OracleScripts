@@ -565,8 +565,12 @@ Data Guard Switchover/Failover
 ==============================
 
     **WARNING**: There appears to be a bug in Data Guard at 11.2.0.4. When a primary database with ``LOG_ARCHIVE_DEST_2`` and ``LOG_ARCHIVE_DEST_3`` is switched over to a standby, the settings for ``LOG_ARCHIVE_DEST_3`` are lost. These need to be reset after each switch over.
-    
+        
     We have logged an SR with Oracle on this matter.
+    
+    However, it turns out not to be a problem. We shouldn't really be setting up these parameters in the databases if we are using Data Guard. Data Guard knows which databases are the standby(s) at any time, and sets it's own parameters internally to suit.
+    
+    You can see those parameters with the command ``SHOW DATABASE whatever`` 
 
 Only the primary running database starts the appropriate service, the standby database(s) physically stop it. This is done by way of the following trigger, owned by SYS:
 
@@ -607,6 +611,15 @@ And for pre-production, we have:
 
 -	PPDCFGSRV - Pre-production database service.
 -	PPDRMNSRV - Pre-production RMAN catalog database service.
+
+And for the RMAN catalog use during backups, we have:
+
+-   RMANCATSRV - In production, points to the CFGRMNSRV service.
+-   RMANCATSRV - In pre-production, points to the PPDRMNSRV service.
+
+The tns alias, *RMANCATSRV* in pre-production *and* production, as described, point to the appropriate RMAN catalog database service mentioned above, according to the server's production or otherwise status. For this reason, the ``TNSNAMES.ORA`` file is *different* in production and pre-production and they *should not* be mixed.
+
+The *RMANCATSRV* service is used in the various RMAN backup scripts (found in ``c:\scripts\RMAN``) on both production and pre-production environments, and so the code in those scripts is identical regardless of the server it exists on. (And only one script is required in TFS too!)
 
 Services are created and deleted by way of the DBMS\_SERVICE package.
 
@@ -678,9 +691,11 @@ CFG
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
     CONFIGURE CONTROLFILE AUTOBACKUP FORMAT FOR DEVICE TYPE DISK TO     '\\backman01\RMANBackup\backups\cfg\autobackup\%F';
-    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
+    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
 
-**Note** the location of the autobackup of the controlfile is subject to change as and when the backup devices, aka the ``Z:\`` drive, are fully up and working.
+    **Note** the location of the autobackup of the controlfile is subject to change as and when the backup devices, aka the ``Z:\`` drive, are fully up and working.
+
+    **Note** *All* the primary databases have the archivelog deletion policy set as shown above, and *all* the standby databases have 'CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY' instead as we don't backup from the standby databases - unless they are running as primary of course. This parameter will require changing when we perform a switchover.
 
 
 CFGAUDIT
@@ -693,7 +708,7 @@ CFGAUDIT
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
     CONFIGURE CONTROLFILE AUTOBACKUP FORMAT FOR DEVICE TYPE DISK TO '\\backman01\RMANBackup\backups\cfgaudit\autobackup\%F';
-    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
+    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
 
     
 CFGRMN
@@ -706,7 +721,7 @@ CFGRMN
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
         CONFIGURE CONTROLFILE AUTOBACKUP FORMAT FOR DEVICE TYPE DISK TO '\\backman01\RMANBackup\backups\cfgrmn\autobackup\%F';
-CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
+CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
 
     
 PPDCFG
@@ -718,7 +733,7 @@ PPDCFG
     CONFIGURE RETENTION POLICY TO REDUNDANCY 10;
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
-    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
+    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
 
     
 PPDRMN
@@ -730,7 +745,7 @@ PPDRMN
     CONFIGURE RETENTION POLICY TO REDUNDANCY 10;
     CONFIGURE BACKUP OPTIMIZATION ON;
     CONFIGURE CONTROLFILE AUTOBACKUP ON;
-    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
+    CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY BACKED UP 2 TIMES TO DISK;
 
     
 Catalogs
