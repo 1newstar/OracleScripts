@@ -61,7 +61,7 @@ as the problems have been resolved.
 Perform Switchover
 ------------------
 
-..  code-block::
+..  code-block:: none
 
     switchover to <standby database name>;
 
@@ -69,7 +69,7 @@ Perform Switchover
 Post Switchover Tasks
 ---------------------
 
-First, amend the RMAN setting for ARCHIVELOG DELETION POLICY as described in section *Check RMAN Archivelog Deletion Policy* below, then skip to section *Post Switchover Checks* and ensure all checks are carried out.
+First, amend the RMAN settings for ARCHIVELOG DELETION POLICY and crosscheck the archived logs,  as described in section *Check RMAN Archivelog Deletion Policy* below, then skip to section *Post Switchover Checks* and ensure all checks are carried out.
 
 
 Explicit Version
@@ -87,7 +87,7 @@ of these should return SUCCESS. If any do not, or if any Oracle errors
 are displayed, you cannot continue until such time as the problems have
 been resolved.
 
-..  code-block::
+..  code-block:: none
 
     oraenv cfg
     dgmgrl sys/password
@@ -101,7 +101,7 @@ been resolved.
 You are expecting to see something similar to the following at the end
 of each of the above commands:
 
-..  code-block::
+..  code-block:: none
 
     Configuration Status:
     SUCCESS
@@ -114,7 +114,7 @@ The broker uses the StaticConnectIdentifier to reach the other
 database(s) in the configuration. You should check that they all work,
 from both servers.
 
-..  code-block::
+..  code-block:: none
 
     show database cfg StaticConnectIdentifier
 
@@ -158,7 +158,7 @@ Both databases have the same DBID, so if RMAN is in use for daily
 backups, then the archivelog deletion policy should be set to "APPLIED
 ON ALL STANDBY BACKED UP 2 TIMES TO DISK" on the primary database:
 
-..  code-block::
+..  code-block:: none
 
     rman target sys/password@CFG
     
@@ -166,12 +166,20 @@ ON ALL STANDBY BACKED UP 2 TIMES TO DISK" on the primary database:
 
 and for the standby, it should be set to "APPLIED ON ALL STANDBY":
 
-..  code-block::
+..  code-block:: none
 
     rman target sys/password@CFGSB
     
     CONFIGURE ARCHIVELOG DELETION POLICY TO APPLIED ON ALL STANDBY;
 
+Finally, because we have been backing up *another* database as the primary, we need to be sure that RMAN is aware that some archived logs are not going to be found on the new primary database server, so, on the primary database:
+
+..  code-block:: none
+
+    crosscheck archivelog all;
+    exit;
+    
+The above may run for some time, do not abandon it. If an archived log cannot be found on *this* server, because it's on another one, then the archived logs backup will fail. We do not want that to happen.    
     
 Verify Tempfiles match
 ----------------------
@@ -280,7 +288,7 @@ Check for these as follows:
 
 The output will resemble the following (slightly contrived) example:
 
-..  code-block::
+..  code-block:: none
 
     USERNAME        TABLESPACE_NAME USED_UBLK  START_TIME mm/dd/yy
     --------------- --------------- ---------- -------------------
@@ -334,7 +342,7 @@ Switch Over
 
 In dgmgrl, on either server, run the following command:
 
-..  code-block::
+..  code-block:: none
 
     connect sys/password
     switchover to <standby database name>;
@@ -365,7 +373,7 @@ Verify Configuration
 
 In dgmgrl run the same commands as you did in the pre-switchover checks.
 
-..  code-block::
+..  code-block:: none
 
     show configuration verbose
     show database <primary database>
@@ -373,12 +381,12 @@ In dgmgrl run the same commands as you did in the pre-switchover checks.
     show instance <primary instance>
     show instance <standby instance>
 
-They should all show a similar result to the following:
+They should all show a 'SUCCESS' result, similar to the following:
 
-..  code-block::
+..  code-block:: none
 
+    ...
     Configuration Status:
-
     SUCCESS
 
     
