@@ -79,21 +79,10 @@ Some of the more common wait events are displayed in the various 'Wait \*' tabs 
 
 For example, the following details appear if you double-click a 'log file sync' wait event:
 
-..  code-block:: none
-
-    Wait Event: log file sync
-    Wait Class: Commit
-
-    Redo log writer process has to flush the log buffer for a session commit, which the log file sync has to wait for to complete
-
-    Possible solutions are: 
-    
-        * Commit less frequently 
-        * Increase the size and/or number of redo log files 
-        * Use faster disks 
-        * Do not place log files on RAID 5 devices, which are generally too slow for numerous writes. 
-        * Improve CPU priority/resources for redo log processing 
-
+..  image:: images/LogFileSync.png
+    :alt: Hints and tips for log file sync (Commit) wait events.
+    :align: center
+  
 
 ******************************
 Trace File Analysis - Top Tabs
@@ -749,7 +738,6 @@ I didn't bother adding any data to the table, I simply started a trace, and drop
 
     drop table norman.norman cascade constraints purge;  
 
-    alter session set tracefile_identifier='DROP_TABLE';
     begin
         dbms_monitor.session_trace_disable;
     end;
@@ -788,7 +776,7 @@ Performance here was not too bad, considering all that Oracle did - only waited 
 
     **Note**: The object IDs here are all -1. This simply means that there are no specific objects involved in these waits.
 
-You may be aware that when you run any DDL statement, create, drop, alter etc, then Oracle will execute a ``COMMIT`` which will commit all your current uncommitted transactions - this is why you never ever mix DDL and DML in the same script - once you've done the DDL, any DML is committed and cannot be rolled back.
+You may be aware that when you run any DDL statement, create, drop, alter etc, then Oracle will execute a ``COMMIT`` which will commit all your current uncommitted transactions - this is why you never ever mix DDL and DML in the same script - once you've done the DDL, any DML is ``COMMIT``ed and cannot be rolled back.
 
 Filter Out the Dross
 --------------------
@@ -819,7 +807,7 @@ Sorting Out a Performance Issue
 Introduction
 ============
 
-I have a query, which I borrowed, stole or wrote by myself, to interrogate the free space in a database for both normal data tablespaces and also to work out what available space there is in the TEMP tablespace(s) too. On some databases it seems to run for about 30 seconds, while on others it runs pretty much instantly. Why the difference?
+I have a query, which I borrowed, stole or wrote by myself\ [1]_\ , to interrogate the free space in a database for both normal data tablespaces and also to work out what available space there is in the TEMP tablespace(s) too. On some databases it seems to run for about 30 seconds, while on others it runs pretty much instantly. Why the difference?
 
 The trace file is ``FreeSpace.trc``.
 
@@ -978,7 +966,7 @@ Explain Plan
 Look at the explain plan. You may find it wise to close everything down - ``right-click -> Collapse All``. You should now see a single row. The *Time* column shows 28,665,421 micro seconds. 28.67 seconds in real money. That's about right for what I saw when I executed it.
 
 -   Click the '+' at the start of the line to open up again, one row appears - ``UNION-ALL``. A similar time for this, so...
--   Click the '+' at the start of the line, two rows appears - ``HASH JOIN OUTER`` and ``HASH GROUP BY``. The time for the latter is only 83,010 uSeconds, so no problems here. The time for the formet is 28,582,079 uSeconds, so we need to dive in there.
+-   Click the '+' at the start of the line, two rows appears - ``HASH JOIN OUTER`` and ``HASH GROUP BY``. The time for the latter is only 83,010 uSeconds, so no problems here. The time for the former is 28,582,079 uSeconds, so we need to dive in there.
 -   Click the '+' at the start of the line for ``HASH JOIN OUTER`` to open it. Two ``VIEW`` rows appear. One has a 28,162,436 uSecond response time. 
 -   Click the '+' at the start of the line for the ``VIEW`` with the extreme time. One row appears - ``HASH GROUP BY``.
 -   Click that one too, to open it. That gives us ``VIEW  DBA_FREE_SPACE ``. Strangely, it has a time of 55,338,658. (55.3 seconds! Something wrong there methinks!)
@@ -998,7 +986,7 @@ Now, I know that we have regularly gathered stats on fixed objects and dictionar
 Bugs!
 -----
 
-It seems we have a bug in 11.2.0.4. `Bug <https://support.oracle.com/epmos/faces/BugDisplay?_afrLoop=109163696075238&id=19125876&_afrWindowMode=0&_adf.ctrl-state=9eq93xdtt_165>`_ affects 11.20.4 on AIX on Power Systems, but this is Windows. The bug was logged on 30th June 2014, last updated on 26th June 2017, *and is not yet fixed!*
+It seems we have a bug in 11.2.0.4. `Bug 19125876 <https://support.oracle.com/epmos/faces/BugDisplay?_afrLoop=109163696075238&id=19125876&_afrWindowMode=0&_adf.ctrl-state=9eq93xdtt_165>`_ affects 11.20.4 on AIX on Power Systems, but this is Windows. The bug was logged on 30th June 2014, last updated on 26th June 2017, *and is not yet fixed!*
 
 Oracle say that:
 
@@ -1034,3 +1022,5 @@ I feel an SR coming on.
 | Author: Norman Dunbar
 | Email: Norman@dunbar-it.co.uk
 | Last Updated: June 26 2017
+
+..  [1] Ok, I admit it, I *borrowed* it from Toad and *slightly* modified it for my own use.
