@@ -5,6 +5,9 @@ Oracle For SQLServer DBAs
 Database Summary
 ================
 
+Azure (Cloud) Databases
+-----------------------
+
 +----------+----------------+---------+------------------------+-------------------------------+
 | Database | Estate         | Role    | Server                 | Purpose                       |
 +==========+================+=========+========================+===============================+
@@ -43,6 +46,21 @@ Database Summary
 | AZFS2nn  | Release        | Primary | rel0rc01.casfs.co.uk   | Release database              |
 +----------+----------------+---------+------------------------+-------------------------------+
 | AZFS2nn  | Release        | Primary | rel0rc02.casfs.co.uk   | Release database              |
++----------+----------------+---------+------------------------+-------------------------------+
+
+Other Databases
+---------------
+
++----------+----------------+---------+------------------------+-------------------------------+
+| Database | Estate         | Role    | Server                 | Purpose                       |
++==========+================+=========+========================+===============================+
+| SCPROD   | Production     | Primary | cfsbckdimora02         | 'Dimension' - Live database   |
++----------+----------------+---------+------------------------+-------------------------------+
+| CFSTLM01 | Production     | Primary | cfsvpwmora01           | 'Smart Scan' - Live database  |
++----------+----------------+---------+------------------------+-------------------------------+
+| CFSTLM02 | Production     | Primary | cfsvpwmora01           | 'Smart Scan' - Live database  |
++----------+----------------+---------+------------------------+-------------------------------+
+| TPMPROD  | Production     | Primary | cfsvpwmora01           | '?????' - Live database       |
 +----------+----------------+---------+------------------------+-------------------------------+
 
 
@@ -139,6 +157,25 @@ You may see something like the following:
     ORACLE_HOME=c:\OracleDatabase\product\11.2.0\dbhome_1
     NLS_DATE_FORMAT=yyyy/mm/dd hh24:mi:ss
     NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1
+
+Diagnostic Data & Logfiles
+==========================
+
+Databases above, defined as 'Primary' have their database name and unique name the same, so ``CFG`` and ``CFG``, for example.
+
+Standby databases, including DR ones, have the *same* database name as their primary database, but a *different* database unique name, 'CFG' and 'CFGSB' for example.
+
+This is required to be known when searching for database diagnostic information in the locations below.
+
+In Azure, the diagnostics are to be found in:
+
+-   ``%ORACLE_BASE%\diag\rdbms\DB_NAME\DB_UNIQUE_NAME\trace\*.log`` for the databases.
+    
+For the live primary database this would be ``c:\OracleDatabase\diag\rdbms\CFG\CFG\trace``, while, for the Standby live database, it becomes ``c:\OracleDatabase\diag\rdbms\CFG\CFGSB\trace``.
+
+-   ``%ORACLE_BASE%\diag\tnslsnr\SERVER_NAME\LISTENER_NAME\trace\listener.log`` for the listener.
+
+For the live primary database, this would be ``c:\OracleDatabase\diag\tnslsnr\uvorc01\listener``. The SERVER_NAME is the short form without the domain name.
 
 Useful Scripts
 ==============
