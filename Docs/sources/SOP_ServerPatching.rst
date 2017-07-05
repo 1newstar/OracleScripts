@@ -14,6 +14,10 @@ The process outlined should allow patching to be carried out with
 minimal downtime for the applications and databases, however, some
 downtime is inevitable.
 
+WARNING
+=======
+
+If you are only patching one of the servers, and it contains a running standby, as would normally be the case (we *never* patch the current primary database's server!) then please make sure that after patching, the Oracle services and the standby databases are restarted. They cannot be left to start automatically as they will ``OPEN`` the database rather than ``MOUNT``ing it - which leads to problems, not least as running an open standby means huge, additional, Oracle Licence costs.
 
 Important – RMAN Backup Tasks
 =============================
@@ -130,6 +134,10 @@ Login to the PRIMARY database and enable log shipping:
     
 Startup the STANDBY database
 ----------------------------
+
+Start the Oracle Services for the standby database. These are (or should be) configured to be under 'manual' startup and shutdown control. We do not want the standby databases to automatically start.
+
+Login to SQL*Plus as a SYSDBA user and:
 
 ..  code-block:: sql
 
@@ -320,6 +328,10 @@ Login to the *new* PRIMARY database and enable log shipping:
 Startup the *New* STANDBY database
 ----------------------------------
 
+Start the Oracle Services for the standby database. These are (or should be) configured to be under 'manual' startup and shutdown control. We do not want the standby databases to automatically start.
+
+Login to SQL*Plus as a SYSDBA user and:
+
 ..  code-block:: sql
 
     startup MOUNT
@@ -462,6 +474,12 @@ Login to the PRIMARY database and enable log shipping:
     
 Startup the DR database
 -----------------------
+
+Start the Oracle Services for the standby database. These are (or should be) configured to be under 'manual' startup and shutdown control. We do not want the standby databases to automatically start.
+
+Login to SQL*Plus as a SYSDBA user and:
+
+..  code-block:: sql
 
     startup MOUNT
 
