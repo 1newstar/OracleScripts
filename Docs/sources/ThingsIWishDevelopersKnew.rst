@@ -433,6 +433,47 @@ If you are only interested in there being a row or not, then use the `EXISTS <ht
 -   The ``SELECT COUNT`` statement will continue reading to the end of the table\ [3]_ as you are asking for a count of all rows meeting the ``WHERE`` clause conditions. 
 -   ``EXISTS`` will stop looking when it finds the first row meeting the ``WHERE`` clause conditions. This can help short circuit the query, but it depends on how far through the table scan it finds a matching row of course.
 
+Use the Correct Data Types
+==========================
+
+In General
+----------
+
+Strings are not numbers. Numbers are not strings, Dates are just that, Dates (and times) etc.
+
+Storing data in the wrong data type is a problem. If, for example, you store numeric values in character data types, try sorting. The same applies to dates, unless you store them in yyyymmdd format.
+
+Also, if the column(s) in question are used to join two tables, then they must be the same data type, precision and scale in both tables, or the optimiser applies implicit functions to convert one data type to another - thus negating the ability to use indexes.
+
+Dates
+-----
+
+Always specify the format of a date that you are storing in, or reading back from a table. *Never* rely on the default data format for the database being the same as the default date format in the database you did your testing in. (You *do* test don't you?)
+
+..  code-block:: sql
+
+    insert into some_table(a_date)
+    values '01/03/2017';
+    
+What actual value does the string get converted to? In the UK and most of the rest of the world, *probably* 1st March 2017. The default date format is likely to be 'dd/mm/yyyy'. in America, all bets are off, as they have the weirdest date format by default, being 'mm/dd/yyyy' so the above date becomes 3rd January 2017.
+
+The code above should always be as follows:
+
+..  code-block:: sql
+
+    insert into some_table(a_date)
+    values to_date('01/03/2017', 'dd/mm/yyyy');
+
+This *explicitly* defines exactly what the date string represents and Oracle will make the *correct* conversion from string to ``DATE`` when storing the data. Do not leave the database to guess!
+
+Stop Using Column Defaults
+--------------------------
+
+If a column has no value, leave it as NULL. Do not use a default value to represent something that isn't there. This can, and does, throw the optimiser off as it has to account for the potential mass of defaults that all have the same value in the table.
+
+This skew may require the use of histograms when gathering statistics for the optimiser to prevent the optimiser from choosing a less than efficient execution plan.
+
+
 Stop Parsing
 ============
 
