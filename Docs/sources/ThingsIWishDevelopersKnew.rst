@@ -436,6 +436,57 @@ If you are only interested in there being a row or not, then use the `EXISTS <ht
 Use the Correct Data Types
 ==========================
 
+Use Anchoring
+-------------
+
+The following code *might* work for all time, but it has an existing, potentially serious error:
+
+..  code-block:: sql
+
+    create or replace package body .....
+    as
+        procedure broken ( ... )
+        as
+            type tTableName is table of varchar2(30);
+            vTableNames tTableName;
+            ...
+        begin
+            select table_name
+            into vTableName
+            from user_tables
+            where ... ;
+            
+            ...
+            
+        end;
+    ...
+
+What happens when Oracle decide to allow table names to be longer than 30 characters? Your code will fail when the first table name with a longer length of name is selected and you will  have to find *every* location in this and other code, where a table_name is selected into a VARCHAR2(30) data type.
+
+If you use anchoring, as follows, your procedure will not fail. When user_tables changes, Oracle may/will notice that your package depends upon it, and recompile quietly on first execution.
+
+..  code-block:: sql
+
+    create or replace package body .....
+    as
+        procedure broken ( ... )
+        as
+            type tTableName is table of user_tables.table_name%type;
+            vTableNames tTableName;
+            ...
+        begin
+            select table_name
+            into vTableName
+            from user_tables
+            where ... ;
+            
+            ...
+            
+        end;
+    ...
+
+The same is true of your own code and tables, whenever you are selecting data from a table, into a PL/SQL variable, you must use anchoring to define the PL/SQL variable correctly to match the table's column.
+
 In General
 ----------
 
