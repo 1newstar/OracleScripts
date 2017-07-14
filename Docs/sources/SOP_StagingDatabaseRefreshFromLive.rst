@@ -61,8 +61,14 @@ A pfile named ``initAZSTG01.ora`` may exist, it should contain *only* the follow
 ..  code-block:: none
 
     db_name=azstg01
+    memory_target=4G
+    memory_max_target=5G
+    sga_target=2G
+    sga_max_size=3G
+    pga_aggregate_target=500M
+    db_recovery_file_dest_size=200g
 
-If the ``initAZSTG01.ora`` file contains more than the above, edit out everything except the above.
+If the ``initAZSTG01.ora`` file contains more than the above, edit out everything except the above. The parameters specified are those we wish to propagate out to other databases that are refreshed (cloned) from this staging database.
    
     
 Restore the CFG Database Dumps
@@ -112,7 +118,7 @@ If you monitor the execution of the ``RMAN`` script, you will see the following,
 
     database mounted
 
-At this point, there is a useful delay while ``RMAN`` reads data from the restored controlfile to enable it to determine the correct backup(s) and files to use to clone the database. Now is the time to disable block change tracking.
+At this point, there is a useful delay while ``RMAN`` reads data from the restored controlfile to enable it to determine the correct backup(s) and files to use to clone the database. Now is the time to disable block change tracking. The delay can be quite extended in actual fact. It's because Oracle is running an internal scan of the backup files to locate the one(s) it needs. This has been seen to take over two hours! This gives you plenty of time to turn off block change tracking. The code being executed to run the scan is ``DBMS_BACKUP_RESTORE.processSearchFileTable`` and appears to be reading the controlfile, very, *very*, slowly!
 
 In a separate session, Toad etc, login to the staging database as SYSDBA and:
     
@@ -121,7 +127,9 @@ In a separate session, Toad etc, login to the staging database as SYSDBA and:
     alter database disable block change tracking;
     select * from v$block_change_tracking;
     
-You should now see that block change tracking is disabled on the staging database.    
+You may get a hug session. Don't worry. Just CTRL-C twice and log back in again. You need to catch the database when it isn't looking. Leave a couple of minutes between attempts for best results. If you leave the hug session hung, it (so far anyway) will never return.
+
+Once you get a response, which should be immediate when the command works, you will have disabled block change tracking on the staging database.
     
 If you neglect to do this step, there is a 50-50 chance that the following will occur after everything has completed:
 
@@ -244,8 +252,6 @@ Once the database is open, we need to drop the existing trigger and any services
 
 ..  code-block:: sql
 
-    alter database open;
-    
     show parameter service_names
     
 The result will most likely be:
@@ -377,14 +383,23 @@ If there are any jobs listed, they must be disabled:
     begin
         dbms_scheduler.disable(name => 'FCS.ALERTS_HEARTBEAT', 
                                force => true);
+        dbms_scheduler.drop_job(job_name => 'FCS.ALERTS_HEARTBEAT');
+
         dbms_scheduler.disable(name => 'FCS.CLEARLOGS',
                                force => true);
+        dbms_scheduler.drop_job(job_name => 'FCS.CLEARLOGS');
+
         dbms_scheduler.disable(name => 'FCS.JISA_18BDAY_CONVERSION',
                                force => true);
+        dbms_scheduler.drop_job(job_name => 'FCS.JISA_18BDAY_CONVERSION');
+
         dbms_scheduler.disable(name => 'PERFSTAT.PURGE_DAILY',
                                force => true);
+        dbms_scheduler.drop_job(job_name => 'PERFSTAT.PURGE_DAILY');
+        
         dbms_scheduler.disable(name => 'PERFSTAT.SNAPSHOT_EVERY_15MINS',
                                force => true);
+        dbms_scheduler.drop_job(job_name => 'PERFSTAT.SNAPSHOT_EVERY_15MINS');
     end;
     /
 
@@ -408,8 +423,13 @@ For all non-production databases, disable the SYS owned jobs that should only be
 
     begin
         dbms_scheduler.disable(name => 'SYS.AUDIT_ARCHIVING', force => true);
-        dbms_scheduler.disable(name => 'SYS.EXPIRE_PASSWORDS', force => true);
+        dbms_scheduler.drop_job(job_name => 'SYS.AUDIT_ARCHIVING');        
+
+        dbms_scheduler.disable(name => 'SYS.EXPIRE_PASSWORDS', force => true);       
+        dbms_scheduler.drop_job(job_name => 'SYS.EXPIRE_PASSWORDS');
+
         dbms_scheduler.disable(name => 'SYS.UTMSODRM', force => true);
+        dbms_scheduler.drop_job(job_name => 'SYS.UTMSODRM');
     end;
     /
     
@@ -435,21 +455,7 @@ We do not want, or need the production database links in a staging database used
     drop public database link CFGSB_LINK;
     drop public database link CFGAUDIT_LINK;
 
-Update Parameters
------------------
-
-As restored, the staging database is now running with the startup parameters reflecting those of the production database. This should be changed to reduce the database's footprinit on the pre-production server.
-
-..  code-block:: sql
-
-    alter system set memory_target=4G scope=spfile;
-    alter system set memory_max_target=5G scope=spfile;
-    alter system set sga_target=2G scope=spfile;
-    alter system set sga_max_size=3G scope=spfile;
-    alter system set pga_aggregate_target=500M scope=spfile;
-    
-    startup force
-    
+   
 
 Depersonalisation
 =================
@@ -680,3 +686,4 @@ The temporary pfile can be deleted:
     del %oracle_home%\database\initTEMP.ora;
     
 The database is now ready for use, and for the post clone tidy up to be carried out. See above for details. 
+
