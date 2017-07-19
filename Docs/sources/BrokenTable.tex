@@ -1,0 +1,376 @@
+\section{Table Test}\label{table-test}
+
+The following table has no spanning rows and the format in pdf is
+correct.
+
+\begin{longtable}[]{@{}llllll@{}}
+\toprule
+\begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.19\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage} & \begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.24\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage} & \begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.24\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+170\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+CALL METHOD\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+199\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+PURGE TABLESPACE\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+218\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+CREATE FLASHBACK ARCHIVE\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+171\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+CREATE SUMMARY\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+200\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+PURGE TABLE\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+219\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+ALTER FLASHBACK ARCHIVE\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+197\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+PURGE USER\_RECYCLEBIN\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+216\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+CREATE ASSEMBLY\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+305\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+ALTER PUBLIC DATABASE LINK\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+198\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+PURGE DBA\_RECYCLEBIN\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+217\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+ALTER ASSEMBLY\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+xxx\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+Filler\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
+
+The following table has a spanning last row which messes up the table
+layout in pdf output.
+
+\begin{longtable}[]{@{}llllll@{}}
+\toprule
+\begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.19\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage} & \begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.24\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage} & \begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.24\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+170\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+CALL METHOD\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+199\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+PURGE TABLESPACE\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+218\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+CREATE FLASHBACK ARCHIVE\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+171\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+CREATE SUMMARY\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+200\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+PURGE TABLE\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+219\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+ALTER FLASHBACK ARCHIVE\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+197\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+PURGE USER\_RECYCLEBIN\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+216\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+CREATE ASSEMBLY\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+305\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+ALTER PUBLIC DATABASE LINK\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+198\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+PURGE DBA\_RECYCLEBIN\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+217\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+ALTER ASSEMBLY\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
+
+The following table has an empty cell in the last row which also messes
+up the table layout in pdf output.
+
+\begin{longtable}[]{@{}llllll@{}}
+\toprule
+\begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.19\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage} & \begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.24\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage} & \begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.24\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+170\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+CALL METHOD\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+199\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+PURGE TABLESPACE\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+218\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+CREATE FLASHBACK ARCHIVE\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+171\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+CREATE SUMMARY\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+200\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+PURGE TABLE\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+219\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+ALTER FLASHBACK ARCHIVE\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+197\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+PURGE USER\_RECYCLEBIN\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+216\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+CREATE ASSEMBLY\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+305\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+ALTER PUBLIC DATABASE LINK\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+198\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+PURGE DBA\_RECYCLEBIN\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+217\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+ALTER ASSEMBLY\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
+
+The following table has a spanning row, not in the last row, which
+messes up the table layout in pdf output.
+
+\begin{longtable}[]{@{}llllll@{}}
+\toprule
+\begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.19\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage} & \begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.24\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage} & \begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.24\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+170\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+CALL METHOD\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+199\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+PURGE TABLESPACE\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+218\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+CREATE FLASHBACK ARCHIVE\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+171\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+CREATE SUMMARY\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+200\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+PURGE TABLE\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+219\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+ALTER FLASHBACK ARCHIVE\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+197\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+PURGE USER\_RECYCLEBIN\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+216\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+CREATE ASSEMBLY\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+198\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+PURGE DBA\_RECYCLEBIN\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+217\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+ALTER ASSEMBLY\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+xxx\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+Filler\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
+
+The following table has a spanning row, not in the last column, which
+messes up the table layout in pdf output.
+
+\begin{longtable}[]{@{}llllll@{}}
+\toprule
+\begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.19\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage} & \begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.24\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage} & \begin{minipage}[b]{0.06\columnwidth}\raggedright\strut
+Code\strut
+\end{minipage} & \begin{minipage}[b]{0.24\columnwidth}\raggedright\strut
+Command\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+170\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+CALL METHOD\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+199\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+PURGE TABLESPACE\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+218\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+CREATE FLASHBACK ARCHIVE\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+171\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+CREATE SUMMARY\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+200\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+PURGE TABLE\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+219\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+ALTER FLASHBACK ARCHIVE\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+197\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+PURGE USER\_RECYCLEBIN\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+305\strut
+\end{minipage} & \begin{minipage}[t]{0.16\columnwidth}\raggedright\strut
+ALTER PUBLIC DATABASE LINK\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+198\strut
+\end{minipage} & \begin{minipage}[t]{0.19\columnwidth}\raggedright\strut
+PURGE DBA\_RECYCLEBIN\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+217\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+ALTER ASSEMBLY\strut
+\end{minipage} & \begin{minipage}[t]{0.06\columnwidth}\raggedright\strut
+xxx\strut
+\end{minipage} & \begin{minipage}[t]{0.24\columnwidth}\raggedright\strut
+Filler\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
