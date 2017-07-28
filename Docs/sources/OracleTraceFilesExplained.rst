@@ -2,7 +2,7 @@
 Oracle Trace Files Explained
 ============================
 
-..  Warning. Do not allow any column spans in any tables if you are producing
+..  Warning. For PANDOC, do not allow any column spans in any tables if you are producing
     PDF output as it messes up the table spacing. This applies to any spans and
     not just those in the final row, final column etc. Works for DOCX though.
 
@@ -1210,7 +1210,7 @@ Some data types use different character sets. These are coded in the ``csi`` fie
 
 | Author: Norman Dunbar
 | Email: norman@dunbar-it.co.uk
-| Last Updated: 21st July 2017.
+| Last Updated: 20th July 2017.
 
 
 ..  [1] But don't quote me on this, I saw it written down somewhere on the Oracle Support web site, but now that I need it, I cannot find it again. Sigh!
