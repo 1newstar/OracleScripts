@@ -78,7 +78,7 @@ For each database you wish to amend:
     -	Click Apply.
     -	Click OK.
 
-**Note** It appears that setting the service to automatic startup *does not stick*. The service appears to always remain in manual startup. You may have to use the ``services`` utility to make the services automatic..
+**Note** It appears that setting the service to automatic startup *does not stick*. The service appears to always remain in manual startup. You may have to use the ``services`` utility to make the services automatic.
 
 
 Software Install Kits
@@ -326,7 +326,7 @@ Databases which *can be run* as a standby are given a static entry in the listen
 
 Databases which are under the control of Data Guard have an additional static entry, ``<DB_UNIQUE_NAME>_DGMGRL``, so that the Data Guard broker can access them in order to carry out switchover, failovers and to check log transport and apply gaps.
 
-The usual ``lsnrctl`` commands work fine on windows but note that start, stop, reload etc require a DOS session with administrator rights. The only alternative is to search for "services" and run the commands form the services utility - which is a *monumental pain*.™
+The usual ``lsnrctl`` commands work fine on windows but note that start, stop, reload etc require a DOS session with administrator rights. The only alternative is to search for "services" and run the commands form the services utility - which is a *monumental pain*.
 
 The listeners run as a Windows service, and are configured to start automatically with the servers. The service name is ``OracleOraDb11g_home1TNSListener`` and can be started and stopped using the ``net stop`` and ``net start`` commands, as well as the ``lsnrctl start`` and ``lsnrctl stop`` ones.
 
@@ -404,6 +404,13 @@ DevOps Databases
 -	AZSTG01 - Partially depersonalised staging database used to create further UAT etc databases where full depersonalisation is not able to be utilised. This is also used as a destination database when testing the RMAN backups of the production database for restorability.
 -	AZSTG01 - Fully depersonalised staging database used to create further DEV etc databases where access to personal data is not permitted.
 -   CFGDEMO - Used by DevOps to test deployments.
+
+Other Databases
+---------------
+
+-   AZFS1nn - Development Databases. Users have full control via the FCS account, which has full DBA rights granted. We are not responsible for these databases, other than making sure that they are up and running on request.
+-   AZFS2nn - Release databases - whatever "release" is taken to mean. Used for UAT etc. We are responsible for these as the users do not have the FCS account credentials.
+-   AZTRNnn - Training databases. Again, we are responsible for these as the users do not have the FCS account credentials.
 
 
 Startup/Shutdown
@@ -638,6 +645,8 @@ Backup Drive
 
 The ``\\BACKMAN01\RMANBACKUP\`` drive has been setup as the main RMAN backup device. This is currently 3TB in size, but this will need to be monitored as normal running starts to take place. Especially as the retention period for the production database has been set to 7 years and a day! (2558).
 
+    **Note** the backup location disc is not big enough to hold a full 7 years worth of backups, incremental or otherwise, so these will be archived off to tape from time to time (scheduled?). In the event that a really old database restore has to be done, they will need restoring to disc first. (Unless, the tape system has a library that RMAN can use of course!)
+
 This drive is *not visible* in Windows File Explorer except to the various service users, it will not appear in Windows File Explorer unless you are logged in as the appropriate service user.
 
 You can, however, map a network drive to ``Z:\``, for example, in your own user. The full path is ``\\BACKMAN01\RMANBACKUP``. This allows you to read and write to the drive, assuming Windows permissions allow of course.
@@ -766,7 +775,7 @@ Both databases have the same catalog username - ``rman11g`` and the password is 
 Daily Backups
 -------------
 
-    **Note**: Due to *foibles* in the way that the application needs certain settings within ``sqlnet.ora`` to be set, we must always login to the databases with a username and password. This includes running backups etc. To this end, the SYS password on the databases, if changed, must be reflected in the settings used to carry out a backup in the  Windows Task Scheduler.
+    **Note**: Due to *foibles* in the way that the application needs certain settings within ``sqlnet.ora`` to be set, we must always login to the databases with a username and password. This includes running backups etc. To this end, the SYS password on the databases, if changed, **must be reflected** in the settings used to carry out a backup in the  Windows Task Scheduler.
 
 Daily backups are configured to take place 7 days a week, with a level 0 incremental backup taking place on Sunday. Every other day of the week will carry out an incremental level 1 backup.
 
@@ -794,6 +803,10 @@ Craig has a diagram of the RMAN backup environment, but in summary:
    
 Production Schedule
 -------------------
+
+The backups of production are taken from the currently running primary database. The database sid (aka db_unique_name) must be passed by the scheduled task's action parameters to the ``BackupDatabase`` script that is used to carry out the backups.
+
+Backups will be located in a folder with the primary database name - ``cfg``, ``cfgsb``, ``cfgdr`` etc, on the backup drive.
 
 **CFG**
 
@@ -871,7 +884,7 @@ This script can be used to backup any database on the server. It is used by the 
 
 The script takes up to 4 parameters:
 
--	Database name - *mandatory*. The SID of the database to be backed up.
+-	Database name - *mandatory*. The SID of the database to be backed up. For standby or DR databases, this must be the actual SID of the database, and not that of the (normal) primary database. So, ``cfgsb`` for example.
 -	SYS password - *mandatory*. The SYS password for the database being
    backed up.
 -	RMAN Level - *optional*. The incremental level for an RMAN backup.
@@ -880,7 +893,7 @@ The script takes up to 4 parameters:
    Defaults to ``\\Backman01\RMANBackup\backups``. A folder for the
    database name will be created if necessary.
 
-The script calls out to the ``oraenv.cmd`` script to set the required oracle environment and to the ``RMAN_backup.cmd`` (see below) to do the actual incremental backups.
+The script calls out to the ``oraenv.cmd`` script to set the required oracle environment and to the ``RMAN_backup.cmd`` (see below) to do the actual incremental backups, so the passed SID must exists in the ``oratab.txt`` file that is used by ``oraenv.cmd``.
 
 This script is called from the Windows Task Scheduler and runs as the appropriate service user account, however, it can be run in your account if desired, to take a one-off backup.
 
@@ -1005,7 +1018,7 @@ After handover, there will be a need for stronger security measures in the datab
 Password Vault
 --------------
 
-Passwords are (currently) stored, encrypted, in the KeePassX system. The database lives at ``\\cfsldsfp01\it$\DevOps_Leeds\devopssecure.kdbx`` as well as locally on everyone's PC.
+Passwords are (currently) stored, encrypted, in the KeePassX system. The master database lives at ``\\downloads\mnt\keepass\devopssecure.kdbx`` as well as locally on everyone's PC. Always remember to resynchronise KeePassX with this file to pick up other people's changes, and to make yours available too.
 
 An Oracle Database Password Profile has been created within KeePassX to generate legal Oracle passwords of 20 characters, but it can create passwords with leading digits, which Oracle doesn't like. You can use this to generate new passwords. (Tools->Generate Password, choose the Oracle Database Password Format profile, click OK.)
 
@@ -1057,7 +1070,7 @@ The users in this database are:
 - ITOPS.
 - ONLOAD. (I suspect this is no longer required.)
 - OEIC_RECALC.
-- UVSCHEDULER. If this password is changed, the scheduler application, amngst others? will need to be changed to match.
+- UVSCHEDULER. If this password is changed, the scheduler application, amongst others? will need to be changed to match.
 - SYS - When this password is changed, the Windows Task Scheduler jobs that run the backups will need changing too.
 
 
@@ -1080,7 +1093,7 @@ The users in this database are:
 - ITOPS.
 - ONLOAD. (I suspect this is no longer required.)
 - OEIC_RECALC.
-- UVSCHEDULER. If this password is changed, the scheduler application, amngst others? will need to be changed to match.
+- UVSCHEDULER. If this password is changed, the scheduler application, amongst others? will need to be changed to match.
 - SYS - When this password is changed, the Windows Task Scheduler jobs that run the backups will need changing too.
 
 
