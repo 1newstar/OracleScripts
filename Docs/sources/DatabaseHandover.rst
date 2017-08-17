@@ -1289,5 +1289,47 @@ For example:
 The above will show the most recent output for the FCS.ALERTS_HEARTBEAT job. With the most recent information at the top.
 
   
+Oracle Enterprise Manager
+=========================
+
+Installing Agents
+-----------------
+
+We are unable to install OEM Agent software on servers as the (previous) Production DBA Team has decreed that we will not be permitted to have the account credentials that would enable us to register the agents with OEM. The problem has been raised with Craig and Neil Boddy, and hopefully, something will be done.
+
+In the meantime, we have to ask them (the Production DBAs) to install agent software for us. Not good.
+
+
+Databases
+---------
+
+The Azure databases listed above, elsewhere, for production only, are registered in OEM and alerts will be sent out by email for all the usual metric failures - standby lags, listener down for example.
+
+The SCPROD (Dimension) database is - as of the time of writing - not registered in OEM. There isn't, as yet, Agent software installed on its server.
+
+The databases are all in the group named 'CFG AZURE' which currently has 9 databases, 7 Oracle Homes and 3 Hosts, Listeners & Agents.
+
+
+
+Reports
+-------
+
+Various reports are emailed out every Wednesday to the Azure DBAs. These are Information Publisher Reports as opposed to BI Publisher Reports as the latter doesn't appear to be installed. These are:
+
+-   *AZURE - License Pack Usage Summary* which Displays the Summary usage information of License Packs..
+-   *AZURE - System Availability History* which Displays availability history for a system over the last 24 hours.
+-   *AZURE - Oracle Database Failed Logins* which Displays a summary of failed login attempts over the last 7 days for each Oracle Database in a group.
+-   *AZURE - CFG - Oracle Database Tablespace Monthly Space Usage* which Displays monthly space usage details for the tablespaces in the CFG Oracle Database, for the past year.
+-   *AZURE - CFGAUDIT - Oracle Database Tablespace Monthly Space Usage* which Displays monthly space usage details for the tablespaces in the CFGAUDIT Oracle Database, for the past year.
+-   *AZURE - CFGRMN - Oracle Database Tablespace Monthly Space Usage* which Displays monthly space usage details for the tablespaces in the CFGRMN Oracle Database, for the past year.
+-   *AZURE - Oracle Database Space Usage (Group)* which Displays space usage and tablespace full alerts for each Oracle Database in the CFG AZURE group.
+
+All current reports are named "AZURE - something" to make searching easier.
+
+The emails list is a list of interested recipients, but we should really be using a mailing list for this. 
+
+The return address for emails is currently set to 'norman.dunbar@capita.co.uk' and will most likely need changing when I leave!
+
+Neil Boddy requested these reports.
 
 
