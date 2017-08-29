@@ -22,7 +22,7 @@ In Unix, for security and auditing purposes, the normal manner of operation woul
 In Windows, the ``su`` command is absent, so we have to do things in a slightly different manner:
 
 -	login to the server as "your name";
--	SHIT + RIGHT-CLICK on the batch file you want to use;
+-	SHIFT + RIGHT-CLICK on the batch file you want to use;
 -	Select "run as a different user";
 -   Enter:
     -	Username: ``casfs\svc_oracleprod`` for production, or, ``casfs\svc_oracleppd`` for pre-production;
@@ -258,6 +258,41 @@ Be aware, however, that just because a service is running, the database may stil
     SQL> startup [mount]
 
 And so on.
+
+
+CheckChoptOptions Utility
+-------------------------
+
+Run this command file, with the appropriate ``%ORACLE_HOME%`` set, and it will be scanned for any extra cost Enterprise Edition options that are turned on. We don't want to be seeing any of the extra cost options enabled on any Oracle installation as we do not licence them.
+
+..  code-block:: batch
+
+    oraenv azfs206
+    CheckChoptOptions
+    
+    Checking ORACLE_HOME = "C:\OracleDatabase\product\11.2.0\dbhome_1".
+    Partitioning - is currently disabled.
+    OLAP - is currently disabled.
+    Label Security - is currently disabled.
+    Data Mining - is currently disabled.
+    Database Vault option - is currently disabled.
+    Real Application Testing - is currently disabled.
+    Database Extensions for .NET - is currently disabled.
+    checkchoptoptions - complete.
+
+The output above is as desired, nothing is enabled.  The following, on the other hand, shows that RAT is enabled, and we must disable it with ``chopt``:
+
+..  code-block:: batch
+
+    oraenv azfs206
+    CheckChoptOptions
+    
+    Checking ORACLE_HOME = "C:\OracleDatabase\product\11.2.0\dbhome_1".
+    ...
+    Real Application Testing - is currently enabled.
+    ...
+    checkchoptoptions - complete.
+
 
 
 MyPath Utility
@@ -775,9 +810,13 @@ Both databases have the same catalog username - ``rman11g`` and the password is 
 Daily Backups
 -------------
 
-    **Note**: Due to *foibles* in the way that the application needs certain settings within ``sqlnet.ora`` to be set, we must always login to the databases with a username and password. This includes running backups etc. To this end, the SYS password on the databases, if changed, **must be reflected** in the settings used to carry out a backup in the  Windows Task Scheduler.
+    **Note 1**: Due to *foibles* in the way that the application needs certain settings within ``sqlnet.ora`` to be set, we must always login to the databases with a username and password. This includes running backups etc. To this end, the SYS password on the databases, if changed, **must be reflected** in the settings used to carry out a backup in the Windows Task Scheduler.
+    
+    **Note 2**: Due to a slight bug in the Windows Scheduler code, you have to uncheck "synchronize over time zones" on the triggers page when setting up or editing the jobs. Otherwise, when BST comes into force, all the jobs will run one hour later than expected or as configured, if the jobs were configured in GMT/UTC and vice versa.
 
 Daily backups are configured to take place 7 days a week, with a level 0 incremental backup taking place on Sunday. Every other day of the week will carry out an incremental level 1 backup.
+
+    **Note 3**: The Scheduler actions for the RMAN backups, *must* specify the actual database SID being backed up, not a service and not the primary database name. So, ``cfg``, ``cfgsb`` or ``cfgdr`` are required, on the appropriate server where the jobs are configured - ``cfg`` on ``uvorc01``, ``cfgsb`` on ``uvorc02`` and ``cfgdr`` on ``druvorc03`` etc.
 
 This is slightly different from the old 9i regime where levels 2 through 4 existed in RMAN, but as these are no longer provided at 11g, the choice is level 0 or level 1 only.
 
@@ -785,20 +824,11 @@ This is slightly different from the old 9i regime where levels 2 through 4 exist
 
 Craig has a diagram of the RMAN backup environment, but in summary:
 
--	RMAN backs up the database to a specific drive. This is mapped on all
-   servers as the same disk, ``\\BACKMAN01\RMANBackup\``, but only within 
-   the service user's account by
-   default, so there's no problem if we switch from backing up the
-   primary to backing up the standby, or the DR databases.
--	The backups are kept on disc for two months. (This may be subject to
-   change).
--	Backups older than two months are copied to a backup vault. This
-   takes place on a separate server so as to reduce impact on production
-   servers.
--	They are not, *under any circumstances*, deleted or obsoleted in
-   RMAN. RMAN continues to "think" that they are available.
--	These vaulted database backups, including archived logs, are kept for
-   as long as is legally required. (Currently 7 years.)
+-	RMAN backs up the database to a specific drive. This is mapped on all servers as the same disk, ``\\BACKMAN01\RMANBackup\``, but only within the service user's account by default, so there's no problem if we switch from backing up the primary to backing up the standby, or the DR databases.
+-	The backups are kept on disc for two months. (This may be subject to change).
+-	Backups older than two months are copied to a backup vault. This takes place on a separate server so as to reduce impact on production servers.
+-	They are not, *under any circumstances*, deleted or obsoleted in RMAN. RMAN continues to "think" that they are available.
+-	These vaulted database backups, including archived logs, are kept for as long as is legally required. (Currently 7 years.)
 
    
 Production Schedule

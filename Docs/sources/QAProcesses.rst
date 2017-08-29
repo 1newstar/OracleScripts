@@ -15,7 +15,7 @@ The following is a non-exclusive list of requirements that we expect to see in a
 
 - All changes should be accompanied by valid Release Notes.
 
-- All code will be QA'd by the production DBAs before being considered for execution. Any code that has not been QA'd by the production DBAs will not be considered for execution.
+- All code will be QA'd by the production DBAs before being considered for execution. Any code that has not been QA'd by the production DBAs will not be deployed.
 
 - The DBA *will not* be permitted to make changes to any code supplied to him/her in order to make it run or to fix 'obvious' problems, etc. The code is assumed to have been fully tested and therefore, should run without change. If the DBA considers that changes are required, then the code must be rejected as it is potentially untested code. The exception to this rule is where code runs in Toad, for example, without a trailing semi-colon, or slash, but in SQL*Plus it does not. See the following rule, however.
 
@@ -27,7 +27,7 @@ The following is a non-exclusive list of requirements that we expect to see in a
 
 - Where code has DDL and DML scripts, the DDL scripts must all be executed *before* any DML can be run. The only exceptions to this are where the DML scripts prompt the DBA to ``COMMIT`` or ``ROLLBACK`` - these *can* be followed by DDL scripts as the data are already known to be in a valid state.
 
-- Code that is run on production will be *identical* to the code that runs on production. *No changes* are permitted between the test runs, and the live runs. If code needs to be changed to run on either system, it should be parameterised so that the correct values can be used at run time - and the release notes must fully document the desired parameters for each run.
+- Code that is run on production will be *identical* to the code that runs on non-production. *No changes* are permitted between the test runs, and the live runs. If code needs to be changed to run on either system, it should be parameterised so that the correct values can be used at run time - and the release notes must fully document the required parameters for each run.
 
 - All code will spool to a log file. This prevents errors from simply vanishing up the screen as the code is executed.
 
