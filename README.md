@@ -50,7 +50,7 @@ A pile of scripts, saved from Toad, that I've used for work, or for helping othe
 A few scripts to make a cold backup, or a level 0 or 1 incremental backup of a database running on a Windows server. A separate script to backup the archived logs also exists here. Watch out for any hard coding!
 
 
-###DBA Daily Checks
+### DBA Daily Checks
 A few scripts to monitor 10g and 11g databases on a daily basis - used until such time as we got hold of proper access to OEM to do our monitoring there.
 
 
