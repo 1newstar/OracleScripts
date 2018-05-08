@@ -1,0 +1,263 @@
+Primary Server - BEFORE
+=======================
+
+vmstat 5 5
+==========
+
+System configuration: lcpu=20 mem=40960MB ent=5.00
+
+kthr    memory              page              faults              cpu
+----- ----------- ------------------------ ------------ -----------------------
+ r  b   avm   fre  re  pi  po  fr   sr  cy  in   sy  cs us sy id wa    pc    ec
+ 2  0 6086236 1963347   0   0   0   0    0   0 1092 14743 6625  3  1 96  0  0.35   7.0
+ 2  0 6086243 1963335   0   0   0   0    0   0 2353 27637 6764  4  1 95  0  0.43   8.7
+ 7  0 6086243 1963330   0   0   0   0    0   0 3113 15313 7437  5  1 94  0  0.54  10.8
+ 2  0 6085008 1964557   0   0   0   0    0   0 2595 48759 7058  6  2 93  0  0.63  12.7
+ 2  0 6086243 1963317   0   0   0   0    0   0 2477 28935 7061  5  1 94  0  0.57  11.4
+
+ 
+ 
+topas:
+======
+
+Topas Monitor for host:axukprdrttdb02           EVENTS/QUEUES    FILE/TTY
+Wed Mar  7 12:14:31 2018   Interval:2           Cswitch    6471  Readch  6617.1K
+                                                Syscall   13521  Writech  939.2K
+CPU     User% Kern% Wait% Idle%   Physc  Entc%  Reads      2331  Rawin         0
+Total     2.1   0.7   1.2  95.9    0.26   5.22  Writes     1308  Ttyout      366
+                                                Forks         0  Igets         1
+Network    BPS  I-Pkts  O-Pkts    B-In   B-Out  Execs         0  Namei       495
+Total     405K   104.5   54.00    401K   3.63K  Runqueue   0.50  Dirblk        0
+                                                Waitqueue   0.0
+Disk    Busy%      BPS     TPS  B-Read  B-Writ                   MEMORY
+Total     1.5    7.35M   467.0   4.03M   3.33M  PAGING           Real,MB   40960
+                                                Faults     1977  % Comp     59
+FileSystem          BPS    TPS  B-Read  B-Writ  Steals        0  % Noncomp  21
+Total             1.63M  549.5   1.63M   7.51K  PgspIn        0  % Client   21
+                                                PgspOut       0
+Name           PID  CPU%  PgSp Owner            PageIn        0  PAGING SPACE
+BESClien    8651058  0.4 25.8M root             PageOut       0  Size,MB   17408
+oracle     12910990  0.4 4.54M oracle           Sios          0  % Used      0
+oracle     19071484  0.3 14.5M oracle                            % Free    100
+oracle      9437676  0.3 35.4M oracle           NFS (calls/sec)
+oracle     19595548  0.3 3.97M oracle           SerV2         0  WPAR Activ    0
+oraagent   11534782  0.3 62.0M oracle           CliV2         0  WPAR Total    0
+oracle     22937888  0.2 67.2M oracle           SerV3         0  Press: "h"-help
+oracle     13107604  0.1 11.9M oracle           CliV3         0         "q"-quit
+oracle     10944868  0.1 12.7M oracle           SerV4         0
+oracle     11207040  0.1 11.8M oracle           CliV4         0
+ohasd.bi    7471396  0.1 51.5M oracle
+oracle     16122352  0.0 18.7M oracle
+oracle     16253428  0.0 18.7M oracle
+oracle     15860202  0.0 18.7M oracle
+oracle     12386686  0.0 9.96M oracle
+oracle     16384504  0.0 18.7M oracle
+oracle     12517762  0.0 89.0M oracle
+BESRelay    7537074  0.0 23.3M root
+cssdagen   10748266  0.0 35.8M oracle
+topas      20447736  0.0 5.50M oracle
+
+
+Topas then 'c' for CPU:
+=======================
+
+Topas Monitor for host:axukprdrttdb02           EVENTS/QUEUES    FILE/TTY
+Wed Mar  7 12:15:05 2018   Interval:2           Cswitch    5229  Readch  3274.8K
+                                                Syscall    9337  Writech  522.2K
+CPU     User% Kern% Wait% Idle%   Physc         Reads      1197  Rawin         0
+0        69.4  23.1   0.4   7.1    0.09         Writes      717  Ttyout      525
+1         0.0   2.1   0.0  97.9    0.02         Forks         0  Igets         1
+2         0.0   1.9   0.0  98.1    0.02         Execs         0  Namei       208
+3         0.0   1.9   0.0  98.1    0.02         Runqueue      0  Dirblk        0
+4         0.0  49.9   0.0  50.1    0.00         Waitqueue   0.0
+5         0.0   4.9   0.0  95.1    0.00                          MEMORY
+6         0.0   4.8   0.0  95.2    0.00         PAGING           Real,MB   40960
+7         0.0   4.4   0.0  95.6    0.00         Faults       76  % Comp     59
+8         0.0  55.0   0.0  45.0    0.00         Steals        0  % Noncomp  21
+9         0.0  21.1   0.0  78.9    0.00         PgspIn        0  % Client   21
+10        0.0  20.4   0.0  79.6    0.00         PgspOut       0
+                                                PageIn        0  PAGING SPACE
+Network    BPS  I-Pkts  O-Pkts    B-In   B-Out  PageOut       1  Size,MB   17408
+Total     508K   106.5   64.00    504K   4.29K  Sios          1  % Used      0
+                                                                 % Free    100
+Disk    Busy%      BPS     TPS  B-Read  B-Writ  NFS (calls/sec)
+Total     1.2    7.22M   409.0   2.75M   4.47M  SerV2         0  WPAR Activ    0
+                                                CliV2         0  WPAR Total    0
+FileSystem          BPS    TPS  B-Read  B-Writ  SerV3         0  Press: "h"-help
+Total              223K  108.5    221K   1.66K  CliV3         0         "q"-quit
+                                                SerV4         0
+Name           PID  CPU%  PgSp Owner            CliV4         0
+oracle     22937888  2.1 67.2M oracle
+BESClien    8651058  0.4 25.8M root
+oracle     19071484  0.2 14.5M oracle
+oracle      9437676  0.2 35.4M oracle
+oraagent   11534782  0.2 62.0M oracle
+oracle     12910990  0.1 4.54M oracle
+oracle     13107604  0.1 11.9M oracle
+oracle     12517762  0.1 89.0M oracle
+oracle     10944868  0.1 12.7M oracle
+oracle     16384504  0.0 18.7M oracle
+oracle     15860202  0.0 18.7M oracle
+oracle     12386686  0.0 9.96M oracle
+oracle     14418230  0.0 18.6M oracle
+oracle     15794454  0.0 18.7M oracle
+BESRelay    7537074  0.0 23.3M root
+oracle     11207040  0.0 11.8M oracle
+oracle     16318966  0.0 18.7M oracle
+oracle     16056818  0.0 18.7M oracle
+oracle     16253428  0.0 18.7M oracle
+ohasd.bi    7471396  0.0 51.5M oracle
+
+
+
+
+topas the c c c:
+================
+
+Topas Monitor for host:axukprdrttdb02           EVENTS/QUEUES    FILE/TTY
+Wed Mar  7 12:15:53 2018   Interval:2           Cswitch    6569  Readch    10.6M
+                                                Syscall   13124  Writech  542.7K
+CPU     User% Kern% Wait% Idle%   Physc  Entc%  Reads      3414  Rawin         0
+Total     1.9   0.9   0.1  97.1    0.27   5.49  Writes      730  Ttyout     3476
+                                                Forks         0  Igets         0
+Network    BPS  I-Pkts  O-Pkts    B-In   B-Out  Execs         0  Namei       188
+Total    7.82M   1.43K   873.5   7.76M   56.6K  Runqueue   0.50  Dirblk        0
+                                                Waitqueue   0.0
+Disk    Busy%      BPS     TPS  B-Read  B-Writ                   MEMORY
+Total     2.7    29.0M   585.5   11.8M   17.2M  PAGING           Real,MB   40960
+                                                Faults        3  % Comp     59
+FileSystem          BPS    TPS  B-Read  B-Writ  Steals        0  % Noncomp  21
+Total             80.0K  64.50   79.2K   787.0  PgspIn        0  % Client   21
+                                                PgspOut       0
+Name           PID  CPU%  PgSp Owner            PageIn        0  PAGING SPACE
+oracle     22937888  7.7 67.2M oracle           PageOut       0  Size,MB   17408
+BESClien    8651058  0.4 25.8M root             Sios          0  % Used      0
+oracle      9437676  0.4 35.4M oracle                            % Free    100
+oracle     19071484  0.3 14.5M oracle           NFS (calls/sec)
+oracle     14418230  0.2 18.6M oracle           SerV2         0  WPAR Activ    0
+oracle     12910990  0.2 4.54M oracle           CliV2         0  WPAR Total    0
+oracle     16581118  0.1 14.7M oracle           SerV3         0  Press: "h"-help
+oraagent   11534782  0.1 62.0M oracle           CliV3         0         "q"-quit
+oracle     15991280  0.1 18.7M oracle           SerV4         0
+oracle     13107604  0.1 11.9M oracle           CliV4         0
+oracle     16318966  0.1 18.7M oracle
+oracle     15794454  0.1 18.7M oracle
+oracle     10944868  0.1 12.7M oracle
+oracle     11207040  0.0 11.8M oracle
+oracle     16187890  0.0 14.7M oracle
+oracle     16253428  0.0 18.7M oracle
+oracle     15860202  0.0 18.7M oracle
+BESRelay    7537074  0.0 23.3M root
+oracle     12386686  0.0 9.96M oracle
+oracle     12517762  0.0 89.0M oracle
+
+
+
+
+topas then 'd' for disk:
+========================
+
+Topas Monitor for host:axukprdrttdb02           EVENTS/QUEUES    FILE/TTY
+Wed Mar  7 12:16:19 2018   Interval:2           Cswitch    5284  Readch  4109.9K
+                                                Syscall    9639  Writech  449.7K
+CPU     User% Kern% Wait% Idle%   Physc  Entc%  Reads      1302  Rawin         0
+Total     1.2   0.5   0.1  98.2    0.17   3.43  Writes      618  Ttyout      619
+                                                Forks         0  Igets         0
+Network    BPS  I-Pkts  O-Pkts    B-In   B-Out  Execs         0  Namei       150
+Total     762K   148.0   94.50    756K   6.31K  Runqueue   0.50  Dirblk        0
+                                                Waitqueue   0.0
+Disk    Busy%      BPS     TPS  B-Read  B-Writ                   MEMORY
+hdisk6    3.5    1.42M   70.00    864K    592K  PAGING           Real,MB   40960
+hdisk5    8.0    1.12M   58.00    688K    464K  Faults        4  % Comp     59
+hdisk8    4.0     918K   32.00    448K    470K  Steals        0  % Noncomp  21
+hdisk9    6.5     624K   51.50    508K    116K  PgspIn        0  % Client   21
+hdisk4    5.0     598K   61.50    498K    100K  PgspOut       0
+hdisk7    4.0     500K   29.50    132K    368K  PageIn        0  PAGING SPACE
+hdisk16   8.5     460K   25.50    136K    324K  PageOut       0  Size,MB   17408
+hdisk13   4.5     420K   39.00    284K    136K  Sios          0  % Used      0
+hdisk12   1.0     384K   13.00       0    384K                   % Free    100
+hdisk11   0.5     362K    5.50       0    362K  NFS (calls/sec)
+hdisk10   0.0    6.00K   12.00   6.00K       0  SerV2         0  WPAR Activ    0
+hdisk15   0.0        0       0       0       0  CliV2         0  WPAR Total    0
+hdisk1    0.0        0       0       0       0  SerV3         0  Press: "h"-help
+hdisk14   0.0        0       0       0       0  CliV3         0         "q"-quit
+hdisk3    0.0        0       0       0       0  SerV4         0
+hdisk2    0.0        0       0       0       0  CliV4         0
+hdisk0    0.0        0       0       0       0
+
+FileSystem          BPS    TPS  B-Read  B-Writ
+Total              987K  290.5    984K   3.24K
+
+Name           PID  CPU%  PgSp Owner
+oracle     22937888  9.4 67.2M oracle
+BESClien    8651058  0.4 25.8M root
+oracle      9437676  0.2 35.4M oracle
+oracle     19071484  0.2 14.5M oracle
+oracle     12910990  0.2 4.54M oracle
+oracle     13107604  0.1 11.9M oracle
+oraagent   11534782  0.1 62.0M oracle
+oracle     12386686  0.0 9.96M oracle
+oracle     14418230  0.0 18.6M oracle
+oracle     15794454  0.0 18.7M oracle
+BESRelay    7537074  0.0 23.3M root
+oracle     16581118  0.0 14.7M oracle
+oracle     10944868  0.0 12.7M oracle
+oracle     11207040  0.0 11.8M oracle
+cssdagen   10748266  0.0 35.8M oracle
+oracle     15860202  0.0 18.7M oracle
+oracle     16384504  0.0 18.7M oracle
+oracle     15991280  0.0 18.7M oracle
+oracle     16515580  0.0 18.7M oracle
+oracle     16187890  0.0 14.7M oracle
+
+
+
+topas then 'n' for network:
+===========================
+
+Topas Monitor for host:axukprdrttdb02           EVENTS/QUEUES    FILE/TTY
+Wed Mar  7 12:16:51 2018   Interval:2           Cswitch   10575  Readch    33.7M
+                                                Syscall   26454  Writech  614.8K
+CPU     User% Kern% Wait% Idle%   Physc  Entc%  Reads     10175  Rawin         0
+Total     9.2   2.4   0.2  88.3    1.02  20.37  Writes      872  Ttyout     2069
+                                                Forks         5  Igets         0
+Network    BPS  I-Pkts  O-Pkts    B-In   B-Out  Execs         2  Namei      1626
+en0      80.3M   14.5K   7.29K   79.8M    484K  Runqueue   0.50  Dirblk        0
+lo0          0       0       0       0       0  Waitqueue   0.0
+                                                                 MEMORY
+Disk    Busy%      BPS     TPS  B-Read  B-Writ  PAGING           Real,MB   40960
+Total     7.2    93.2M   611.0   33.5M   59.8M  Faults     4414  % Comp     59
+                                                Steals        0  % Noncomp  21
+FileSystem          BPS    TPS  B-Read  B-Writ  PgspIn        0  % Client   21
+Total             2.15M  699.5   2.15M   6.79K  PgspOut       0
+                                                PageIn        0  PAGING SPACE
+Name           PID  CPU%  PgSp Owner            PageOut       0  Size,MB   17408
+oracle     22937888  3.4 67.2M oracle           Sios          0  % Used      0
+oracle     16187890  1.5 14.7M oracle                            % Free    100
+oracle     16318966  1.0 18.7M oracle           NFS (calls/sec)
+oracle     16253428  0.9 18.7M oracle           SerV2         0  WPAR Activ    0
+oracle      9437676  0.7 35.4M oracle           CliV2         0  WPAR Total    0
+oracle     15860202  0.6 18.7M oracle           SerV3         0  Press: "h"-help
+oracle     16384504  0.5 18.7M oracle           CliV3         0         "q"-quit
+oracle     15991280  0.4 18.7M oracle           SerV4         0
+oracle     16515580  0.4 18.7M oracle           CliV4         0
+oracle     14418230  0.4 18.6M oracle
+oracle     16056818  0.3 18.7M oracle
+oracle     16122352  0.3 18.7M oracle
+oracle     19071484  0.3 14.5M oracle
+oracle     16581118  0.2 14.7M oracle
+oracle     15794454  0.2 18.7M oracle
+BESClien    8651058  0.2 25.8M root
+oracle     17236274  0.2 3.95M oracle
+tnslsnr     6816120  0.2 14.8M oracle
+oracle     14680574  0.2 3.95M oracle
+oracle     20513158  0.2 3.95M oracle
+
+
+
+
+
+
+
+
+

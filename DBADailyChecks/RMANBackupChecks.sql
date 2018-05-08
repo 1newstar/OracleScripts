@@ -1,12 +1,15 @@
 column tree format a12
+column session_recid noprint
+break on session_recid skip 2
+set lines 2000 trimspool on pages 2000
 
-spool logs\RMANBackupCheck.lst
+--spool logs\RMANBackupCheck.lst
 
 -- Hierarchic data.
-select rpad('|', (level-1) * 3, '_') || recid as tree, recid, start_time, end_time, object_type, status, operation 
+select session_recid, rpad('|', (level-1) * 3, '_') || recid as tree, recid, to_char(start_time, 'dd/mm/yyyy hh24:mi:ss') as start_time, to_char(end_time, 'dd/mm/yyyy hh24:mi:ss') as end_time, object_type, status, operation 
 from (
 --
-    select recid, parent_recid, start_time, end_time, object_type, status, operation 
+    select session_recid, recid, parent_recid, start_time, end_time, object_type, status, operation 
     from v$rman_status
     where row_type in ('COMMAND', 'RECURSIVE OPERATION')
     and (
@@ -17,16 +20,16 @@ from (
             ( object_type is null and operation like 'CONTROL FILE%')
         )
     -- Everything from Monday, Sunday, Saturday and Friday, maximum.
-    and start_time >= trunc(sysdate) -3
+    and start_time >= trunc(sysdate) -1
     --
     union all
     --
-    select recid, parent_recid, start_time, end_time, object_type, status, operation 
+    select session_recid, recid, parent_recid, start_time, end_time, object_type, status, operation 
     from v$rman_status
     where operation in ('RMAN')
     and row_type = 'SESSION'
     --and status != 'COMPLETED'
-    and start_time >= trunc(sysdate) -3
+    and start_time >= trunc(sysdate) -1
 --
 )
 connect by nocycle prior recid = parent_recid

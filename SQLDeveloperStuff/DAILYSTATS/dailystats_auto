@@ -1,0 +1,25 @@
+### stats_daily_auto
+### Norman Dunbar
+### 5th March 2018.
+###
+### Generates the SQL commands required to analyse all tables, partitions etc with stale stats.
+### For MISA:
+###     Submits a number of DBMS_SCHEDULER jobs to run them, and executes them automatically.
+### 
+### For RTT/PNET and MYHERMES:
+###     Executes the SQL commands in the current session, automatically.
+###
+### For MISA, MYHERMES and RTT/PNET only.
+###
+export TZ='Europe/London'
+export LANG=en_GB
+
+echo `date '+%a %B %d/%m/%Y'` >> $HOME/alain/stats_daily.log
+sqlplus /nolog <<EOD | tee -a stats_daily.log
+conn / as sysdba
+set pages 3000 lines 500 time on trimspool on
+set serverout on size unlimited
+-- Submit jobs for execution and execute them automatically.
+exec dba_user.pkg_dailystats.statsControl(piDatabase => 'XXXX', piDisplayOnly => false, piEnableJobs => true);
+quit;
+EOD

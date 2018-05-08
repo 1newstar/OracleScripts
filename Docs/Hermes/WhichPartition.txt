@@ -1,0 +1,40 @@
+https://www.freelists.org/post/oracle-l/DBA-TAB-PARTITIONS,6
+
+What you can do depends on the version of Oracle you've got and what you know 
+about the partitioned object. You may not need to convert the high_value at 
+all, just query the database for the data_object_id of each partition you think 
+you will need by value e.g: assuming you have a partitioned table that is 
+partitioned by month and you want to compress all partitions prior to 1st Jan 
+2018, here's a literal string method to point the way:
+
+select
+        dbms_rowid.rowid_object(rowid),
+        dbms_mview.pmarker(rowid)
+from
+        transactions partition for (to_date('28-Dec-2017','dd-mon-yyyy'))
+where
+        rownum = 1
+;
+
+DBMS_ROWID.ROWID_OBJECT(ROWID) DBMS_MVIEW.PMARKER(ROWID)
+------------------------------ -------------------------
+                         92485                     92485
+
+(pmarker() returns the data_object_id for the row, but it's not really 
+documented as such, so dbms_rowid is a better bet.)
+
+
+select object_name, subobject_name from user_objects where object_name = 
+'TRANSACTIONS' and data_object_id = 92485;
+
+OBJECT_NAME          SUBOBJECT_NAME
+-------------------- ----------------------
+TRANSACTIONS         SYS_P723
+
+
+Regards,
+Jonathan Lewis
+
+WARNING: If there are no rows in the partition, then the query to fetch the rowid returns NULL. So you cannot get the partition id, for a valid date (in this case), when there are no rows present in the appropriate partition.
+
+Norman Dunbar.

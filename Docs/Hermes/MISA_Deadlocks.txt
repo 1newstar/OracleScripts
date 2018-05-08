@@ -1,0 +1,212 @@
+Trace Files:
+
+MISA01P1_p014_20971706.trc MISA01P1_p032_16711942.trc MISA01P1_p030_36569144.trc MISA01P1_p034_10092808.trc MISA01P1_p009_22478896.trc MISA01P1_p010_27722130.trc MISA01P1_p015_17236008.trc MISA01P1_p011_21037510.trc MISA01P1_p009_22478896.trc MISA01P1_p010_27722130.trc MISA01P1_p013_26411098.trc
+
+
+Stuff:
+
+ORA-00060: Deadlock detected. More info in file /opt/oracle/diag/rdbms/misa01p1/MISA01P1/trace/MISA01P1_p012_12648568.trc.
+
+*** 2018-01-24 02:51:25.416
+Deadlock graph:
+                       ---------Blocker(s)--------  ---------Waiter(s)---------
+Resource Name          process session holds waits  process session holds waits
+TX-00790020-0014afce       304    1702     X            306    1907           X
+
+session 1702: DID 0001-00EA-001F9269    session 1907: DID 0001-00EA-001F9269
+
+Rows waited on:
+  Session 1702: obj - rowid = 018CB356 - ABlax4AQAAABu8+AAG
+  (dictionary objn - 25998166, file - 1024, block - 454462, slot - 6)
+  Session 1907: obj - rowid = 018CB356 - ABlax4AQAAABQClAAW
+  (dictionary objn - 25998166, file - 1024, block - 327845, slot - 22)
+
+  
+  ----------------------------------------------------------------
+"ROWID"                       "PARCEL_ID"                   "PARCEL_ORDER_TIMESTAMP"      
+"ABlax4AAAAABQClAAW"          "-129723189"                  "14-JAN-18 18.00.19.000000000"
+"ABlax4AAAAABu8+AAG"          "-130063683"                  "18-JAN-18 09.28.03.000000000"
+  ----------------------------------------------------------------
+
+----- Information for the OTHER waiting sessions -----
+Session 1702:
+  sid: 1702 ser: 51015 audsid: 87520950 user: 93/HERMES_MI_STAGE
+    flags: (0x41) USR/- flags_idl: (0x1) BSY/-/-/-/-/-
+    flags2: (0x40009) -/-/INC
+  pid: 304 O/S info: user: oracle, term: UNKNOWN, ospid: 27722130
+    image: oracle@axukprdmisadb01 (P010)
+  client details:
+    O/S info: user: oracle, term: unknown, ospid: 27722130
+    machine: axukprdmisadb01.int.hlg.de program: oracle@axukprdmisadb01 (P010)
+    client info: 225620252
+    application name: OWB_CCS, hash value=3779927750
+    action name: EXECUTION, hash value=4277921291
+  current SQL:
+----- End of information for the OTHER waiting sessions -----
+
+
+
+
+
+ORA-00060: Deadlock detected. More info in file /opt/oracle/diag/rdbms/misa01p1/MISA01P1/trace/MISA01P1_p016_14090486.trc.
+
+*** 2018-01-24 02:51:25.395
+DEADLOCK DETECTED ( ORA-00060 )
+
+[Transaction Deadlock]
+
+The following deadlock is not an ORACLE error. It is a
+deadlock due to user error in the design of an application
+or from issuing incorrect ad-hoc SQL. The following
+information may aid in determining the deadlock:
+
+Deadlock graph:
+                       ---------Blocker(s)--------  ---------Waiter(s)---------
+Resource Name          process session holds waits  process session holds waits
+TX-00790020-0014afce       304    1702     X             40     426           X
+
+session 1702: DID 0001-00EA-001F9269    session 426: DID 0001-00EA-001F9269
+
+Rows waited on:
+  Session 1702: obj - rowid = 018CB356 - ABlax4AQAAABu8+AAG
+  (dictionary objn - 25998166, file - 1024, block - 454462, slot - 6)
+  Session 426: obj - rowid = 018CB356 - ABlax4AQAAAA1lWAAc
+  (dictionary objn - 25998166, file - 1024, block - 219478, slot - 28)
+
+  
+  ----------------------------------------------------------------
+  "ROWID"                       "PARCEL_ID"                   "PARCEL_ORDER_TIMESTAMP"      
+"ABlax4AAAAAA1lWAAc"          "-130305832"                  "22-JAN-18 10.13.28.000000000"
+"ABlax4AAAAABu8+AAG"          "-130063683"                  "18-JAN-18 09.28.03.000000000"
+  ----------------------------------------------------------------
+
+
+----- Information for the OTHER waiting sessions -----
+Session 1702:
+  sid: 1702 ser: 51015 audsid: 87520950 user: 93/HERMES_MI_STAGE
+    flags: (0x41) USR/- flags_idl: (0x1) BSY/-/-/-/-/-
+    flags2: (0x40009) -/-/INC
+  pid: 304 O/S info: user: oracle, term: UNKNOWN, ospid: 27722130
+    image: oracle@axukprdmisadb01 (P010)
+  client details:
+    O/S info: user: oracle, term: unknown, ospid: 27722130
+    machine: axukprdmisadb01.int.hlg.de program: oracle@axukprdmisadb01 (P010)
+    client info: 225620252
+    application name: OWB_CCS, hash value=3779927750
+    action name: EXECUTION, hash value=4277921291
+  current SQL:
+
+----- End of information for the OTHER waiting sessions -----
+
+
+
+ORA-00060: Deadlock detected. More info in file /opt/oracle/diag/rdbms/misa01p1/MISA01P1/trace/MISA01P1_p032_16711942.trc.
+
+*** 2018-01-24 03:32:01.864
+DEADLOCK DETECTED ( ORA-00060 )
+
+[Transaction Deadlock]
+
+The following deadlock is not an ORACLE error. It is a
+deadlock due to user error in the design of an application
+or from issuing incorrect ad-hoc SQL. The following
+information may aid in determining the deadlock:
+
+Deadlock graph:
+                       ---------Blocker(s)--------  ---------Waiter(s)---------
+Resource Name          process session holds waits  process session holds waits
+TX-00790020-0014afce        58    2333     X             56    2104           X
+
+session 2333: DID 0001-00E1-002682B7    session 2104: DID 0001-00E1-002682B7
+
+Rows waited on:
+  Session 2333: no row
+  Session 2104: obj - rowid = 018CB356 - ABlax4AQAAABitVAAM
+  (dictionary objn - 25998166, file - 1024, block - 404309, slot - 12)
+
+----- Information for the OTHER waiting sessions -----
+Session 2333:
+  sid: 2333 ser: 29213 audsid: 87526187 user: 93/HERMES_MI_STAGE
+    flags: (0x41) USR/- flags_idl: (0x1) BSY/-/-/-/-/-
+    flags2: (0x40009) -/-/INC
+  pid: 58 O/S info: user: oracle, term: UNKNOWN, ospid: 10092808
+    image: oracle@axukprdmisadb01 (P034)
+  client details:
+    O/S info: user: oracle, term: unknown, ospid: 10092808
+    machine: axukprdmisadb01.int.hlg.de program: oracle@axukprdmisadb01 (P034)
+    client info: 225633195
+    application name: OWB_CCS, hash value=3779927750
+    action name: EXECUTION, hash value=4277921291
+  current SQL:
+----- End of information for the OTHER waiting sessions -----
+
+
+
+*** 2018-01-24 03:32:00.847
+DEADLOCK DETECTED ( ORA-00060 )
+
+[Transaction Deadlock]
+
+The following deadlock is not an ORACLE error. It is a
+deadlock due to user error in the design of an application
+or from issuing incorrect ad-hoc SQL. The following
+information may aid in determining the deadlock:
+
+Deadlock graph:
+                       ---------Blocker(s)--------  ---------Waiter(s)---------
+Resource Name          process session holds waits  process session holds waits
+TX-00790020-0014afce        54    1901     X             56    2104           X
+
+session 1901: DID 0001-00E1-002682B7    session 2104: DID 0001-00E1-002682B7
+
+Rows waited on:
+  Session 1901: no row
+  Session 2104: obj - rowid = 018CB356 - ABlax4AQAAABq4lAAK
+  (dictionary objn - 25998166, file - 1024, block - 437797, slot - 10)
+
+----- Information for the OTHER waiting sessions -----
+Session 1901:
+  sid: 1901 ser: 39039 audsid: 87526187 user: 93/HERMES_MI_STAGE
+    flags: (0x41) USR/- flags_idl: (0x1) BSY/-/-/-/-/-
+    flags2: (0x40009) -/-/INC
+  pid: 54 O/S info: user: oracle, term: UNKNOWN, ospid: 36569144
+    image: oracle@axukprdmisadb01 (P030)
+  client details:
+    O/S info: user: oracle, term: unknown, ospid: 36569144
+    machine: axukprdmisadb01.int.hlg.de program: oracle@axukprdmisadb01 (P030)
+    client info: 225633195
+    application name: OWB_CCS, hash value=3779927750
+    action name: EXECUTION, hash value=4277921291
+  current SQL:
+----- End of information for the OTHER waiting sessions -----
+
+
+
+ORA-00060: Deadlock detected. More info in file /opt/oracle/diag/rdbms/misa01p1/MISA01P1/trace/MISA01P1_p030_36569144.trc.
+ORA-00060: Deadlock detected. More info in file /opt/oracle/diag/rdbms/misa01p1/MISA01P1/trace/MISA01P1_p034_10092808.trc.
+ORA-00060: Deadlock detected. More info in file /opt/oracle/diag/rdbms/misa01p1/MISA01P1/trace/MISA01P1_p009_22478896.trc.
+ORA-00060: Deadlock detected. More info in file /opt/oracle/diag/rdbms/misa01p1/MISA01P1/trace/MISA01P1_p010_27722130.trc.
+ORA-00060: Deadlock detected. More info in file /opt/oracle/diag/rdbms/misa01p1/MISA01P1/trace/MISA01P1_p015_17236008.trc.
+ORA-00060: Deadlock detected. More info in file /opt/oracle/diag/rdbms/misa01p1/MISA01P1/trace/MISA01P1_p011_21037510.trc.
+ORA-00060: Deadlock detected. More info in file /opt/oracle/diag/rdbms/misa01p1/MISA01P1/trace/MISA01P1_p009_22478896.trc.
+ORA-00060: Deadlock detected. More info in file /opt/oracle/diag/rdbms/misa01p1/MISA01P1/trace/MISA01P1_p010_27722130.trc.
+ORA-00060: Deadlock detected. More info in file /opt/oracle/diag/rdbms/misa01p1/MISA01P1/trace/MISA01P1_p013_26411098.trc.
+ORA-00060: deadlock detected while waiting for resource
+ORA-12801: error signaled in parallel query server P010
+ORA-00060: deadlock detected while waiting for resource
+Dumping diagnostic data in directory=[cdmp_20180124034408], requested by (instance=1, osid=34406632), summary=[abnormal process termination].
+
+
+
+MISA01P1_p032_16711942.trc:  Session 1901: obj - rowid = 018CB356 - ABlax4AQAAABoeTAAJ
+MISA01P1_p032_16711942.trc:  Session 2104: obj - rowid = 018CB356 - ABlax4AQAAABq4lAAK
+MISA01P1_p032_16711942.trc:  Session 1901: no row <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+MISA01P1_p032_16711942.trc:  Session 2104: obj - rowid = 018CB356 - ABlax4AQAAABq4lAAK
+MISA01P1_p032_16711942.trc:  Session 2333: no row <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
+
+
+
+

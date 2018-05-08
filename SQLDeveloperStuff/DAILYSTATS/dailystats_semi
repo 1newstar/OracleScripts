@@ -1,0 +1,23 @@
+### stats_daily_semi
+### Norman Dunbar
+### 5th March 2018.
+###
+### Generates the SQL commands required to analyse all tables, partitions etc with stale stats,
+### submits a number of DBMS_SCHEDULER jobs to run them, but disabled so that the DBA can control
+### the actual execution.
+###
+### For MISA, RTT/PNET and MYHERMES.
+###
+export TZ='Europe/London'
+export LANG=en_GB
+
+echo `date '+%a %B %d/%m/%Y'` >> $HOME/alain/stats_daily.log
+sqlplus /nolog <<EOD | tee -a stats_daily.log
+conn / as sysdba
+set pages 3000 lines 500 time on trimspool on
+set serverout on size unlimited
+-- Submit jobs for execution, but disabled, for DBA control of execution.
+exec dba_user.pkg_dailystats.statsControl(piDatabase => 'XXXX', piDisplayOnly => false, piEnableJobs => false);
+quit;
+EOD
+

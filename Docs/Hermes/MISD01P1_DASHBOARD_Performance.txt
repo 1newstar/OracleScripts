@@ -1,0 +1,102 @@
+Table is HEDW_EDW.COURIER_PARCEL_EVENTS.
+Table has 2,517,284,194 rows.
+Stats says only 2,380,161,075 rows.
+Last Analysed 27 December 2017.
+Paralle Degree: 16
+
+    NOTE: Executions etc listed below were accurate at the time of sampling. However, 3 additional executions took place later, resulting in the following deltas per execution:
+
+    DISK READS: 936,505 per execution.
+    CPU TIME: 48.6 seconds per execution.
+    ELAPSED TIME: 166.2 seconds per execution. (2m 46s)
+
+QUERY:
+
+SQL_ID: an2aq8q5y941g
+EXECUTIONS: 250 (as of 10:21 on 31/01/2018)
+PX Servers executions: 2,549
+PARSES: 2,777
+DISK READS: 210,947,953
+BUFFER GETS: 215,234,907
+APP WAIT TIME: 6,997,875 (6.9 seconds)
+CONCURRENCY WAIT TIME: 257,648 (0.2 seconds)
+USER IO WAIT TIME: 31,766,567,552 (31,766 seconds)
+COST: 113,451
+CPU TIME: 11,383,907,585 (11,383 seconds to parse/exec/fetch => 3h 9m 43s)
+ELAPSED TIME: 55,765,862,302 (55,765 seconds to parse/exec/fetch => 15h 29m 25s)
+PHYS READ BYTES: 3,445,837,463,552 (3.13 Tb)
+
+
+COLUMNS:
+
+HERMES_WRT_TMESTP   TIMESTAMP(6)
+TMESTP              DATE
+
+MD_LOAD_DATE        DATE
+HHT_EVT_TMESTP      TIMESTAMP(6)
+DB_ROW_TMESTP       TIMESTAMP(6)
+IF_TMESTP           TIMESTAMP(6)
+
+
+SELECT  
+        -- HERMES_WRT_TMESTP - TMESTP as minutes. Different data types. 
+        -- This calculation rounds the seconds over 30 up and under 30 down to get the minute count.
+        -- UNLESS the minutes part is zero, then 30 seconds rounds down!
+        -- Conversion between TIMESTAMP/STRING/DATE is a tad CPU intensive though.
+        ROUND((TO_DATE(TO_CHAR("A1"."HERMES_WRT_TMESTP",'DD-MON-YY HH24:MI:SS'),'DD-MON-YY HH24:MI:SS') - 
+               "A1"."TMESTP") * 24 * 60), 
+        -- And the count of same.
+        COUNT(*)
+FROM    "HEDW_EDW"."COURIER_PARCEL_EVENTS" "A1"
+WHERE   
+        -- SYSDATE over a db link?
+        -- Comparing DATE with DATE = good.
+        "A1"."MD_LOAD_DATE" > TRUNC(SYSDATE@!)
+AND     
+        -- SYSDATE over a db link?
+        -- Comparing TIMESTAMP (no TZ) with TIMESTAMP WITH TZ = implict conversions.
+        "A1"."HHT_EVT_TMESTP" > CAST(TRUNC(SYSDATE@!) AS TIMESTAMP WITH TIME ZONE)
+AND     
+        -- DB_ROW_TMESTP - HHT_EVT_TMESTP as seconds > 0
+        -- TIMESTAMP - TIMESTAMP = interval day to second
+        -- Don't need the multiplies here, anything over 0 will still be over 0 after the multiply.
+        EXTRACT(DAY FROM ("A1"."DB_ROW_TMESTP" - "A1"."HHT_EVT_TMESTP")DAY(9) TO SECOND(6))*24*60*60 + 
+        EXTRACT(HOUR FROM    ("A1"."DB_ROW_TMESTP" - "A1"."HHT_EVT_TMESTP") DAY(9) TO SECOND(6))*60*60 + 
+        EXTRACT(MINUTE FROM  ("A1"."DB_ROW_TMESTP" - "A1"."HHT_EVT_TMESTP")DAY(9) TO SECOND(6))*60 + 
+        EXTRACT(SECOND FROM  ("A1"."DB_ROW_TMESTP" - "A1"."HHT_EVT_TMESTP")DAY(9) TO SECOND(6)) > 0
+AND     
+        -- IF_TMESTP - DB_ROW_TMESTP as seconds > 0
+        -- TIMESTAMP - TIMESTAMP = interval day to second
+        -- Don't need the multiplies here, anything over 0 will still be over 0 after the multiply.
+        EXTRACT(DAY FROM ("A1"."IF_TMESTP" - "A1"."DB_ROW_TMESTP")DAY(9) TO SECOND(6))*24*60*60 + 
+        EXTRACT(HOUR FROM    ("A1"."IF_TMESTP" - "A1"."DB_ROW_TMESTP")DAY(9) TO SECOND(6))*60*60 + 
+        EXTRACT(MINUTE FROM  ("A1"."IF_TMESTP" - "A1"."DB_ROW_TMESTP")DAY(9) TO SECOND(6))*60 + 
+        EXTRACT(SECOND FROM  ("A1"."IF_TMESTP" - "A1"."DB_ROW_TMESTP")DAY(9) TO SECOND(6)) > 0
+AND     
+        -- HERMES_WRT_TMESTP - IF_TMESTP as seconds > 0
+        -- TIMESTAMP - TIMESTAMP = interval day to second
+        -- Don't need the multiplies here, anything over 0 will still be over 0 after the multiply.
+        EXTRACT(DAY FROM ("A1"."HERMES_WRT_TMESTP" - "A1"."IF_TMESTP")DAY(9) TO SECOND(6))*24*60*60 + 
+        EXTRACT(HOUR FROM    ("A1"."HERMES_WRT_TMESTP" - "A1"."IF_TMESTP")DAY(9) TO SECOND(6))*60*60 +
+        EXTRACT(MINUTE FROM  ("A1"."HERMES_WRT_TMESTP" - "A1"."IF_TMESTP")DAY(9) TO SECOND(6))*60 + 
+        EXTRACT(SECOND FROM  ("A1"."HERMES_WRT_TMESTP"-"A1"."IF_TMESTP")DAY(9) TO SECOND(6)) > 0
+GROUP BY 
+        -- HERMES_WRT_TMESTP - TMESTP as minutes.
+        ROUND((TO_DATE(TO_CHAR("A1"."HERMES_WRT_TMESTP",'DD-MON-YY HH24:MI:SS'),'DD-MON-YY HH24:MI:SS') - "A1"."TMESTP")*24*60);
+        
+      
+
+--=============================================================      
+SELECT  round(extract (second from (hermes_wrt_tmestp  - tmestp))/60 + 
+              extract (minute from (hermes_wrt_tmestp  - tmestp))), 
+        COUNT(*)
+FROM    "HEDW_EDW"."COURIER_PARCEL_EVENTS" "A1"
+WHERE   "A1"."MD_LOAD_DATE" > TRUNC(SYSDATE@!)
+AND     "A1"."HHT_EVT_TMESTP" > CAST(TRUNC(SYSDATE@!) AS TIMESTAMP )
+AND     "A1"."DB_ROW_TMESTP" - "A1"."HHT_EVT_TMESTP" > to_DSinterval('0 00:00:00.0')
+AND     "A1"."IF_TMESTP" - "A1"."DB_ROW_TMESTP" > to_DSinterval('0 00:00:00.0')
+AND     "A1"."HERMES_WRT_TMESTP" - "A1"."IF_TMESTP" > to_DSinterval('0 00:00:00.0')
+GROUP BY 
+        round(extract (second from (hermes_wrt_tmestp  - tmestp))/60 + 
+              extract (minute from (hermes_wrt_tmestp  - tmestp)));
+        

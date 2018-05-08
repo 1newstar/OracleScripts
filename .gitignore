@@ -1,7 +1,19 @@
 *.lst
 *.log
-Toad Stuff\*.lst
-Toad Stuff\*.log
-Docs\sources\*.docx
-Docs\sources\*.pdf
+*.zip
+*.xls
+*.docx
+Toad Stuff/*.lst
+Toad Stuff/*.log
+Docs/sources/*.docx
+Docs/sources/*.pdf
+Docs/Hermes/*.docx
+SQLDeveloperStuff/*.xls
+SQLDeveloperStuff/*.zip
+SQLDeveloperStuff/*.html
+
+
+!Docs/pandoc_reference.doc
+
+
 

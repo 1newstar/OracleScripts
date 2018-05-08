@@ -1,0 +1,21 @@
+### stats_daily_manual
+### Norman Dunbar
+### 5th March 2018.
+###
+### Displays (only) the SQL commands required to analyse all tables, partitions etc with stale stats.
+###
+### For MISA, MYHERMES and RTT/PNET only.
+###
+export TZ='Europe/London'
+export LANG=en_GB
+
+echo `date '+%a %B %d/%m/%Y'` >> $HOME/alain/stats_daily.log
+sqlplus /nolog <<EOD | tee -a stats_daily.log
+conn / as sysdba
+set pages 3000 lines 500 time on trimspool on
+set serverout on size unlimited
+-- Display only, nothing is executed or enabled.
+exec dba_user.pkg_dailystats.statsControl(piDatabase => 'XXXX', piDisplayOnly => true, piEnableJobs => false);
+quit;
+EOD
+

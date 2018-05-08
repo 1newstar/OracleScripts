@@ -1,0 +1,175 @@
+PARTITIONED TABLES UNDER PNET AND THEIR PARTITIONED SEGMENTS
+============================================================
+
+SQL> select count(partition_name), table_name from dba_tab_partitions where table_owner = 'PNET' group by table_name order by 1;
+
+NUMBER OF PARTITIONS  TABLE_NAME
+--------------------- ------------------------------
+                    5 CLN_ITM_PROG
+                    5 CLN_EXCN_PROG
+                    7 MFST_CLN_DET
+                    7 PCL_DIVN_DET
+                    8 PCL_BCDE_TEST
+                    9 MFST_LNK_DET
+                    9 CLN_RQST_PROG
+                    9 CLN_PROG
+                   10 MFST_PCL_DET
+                   10 CLN
+                   10 CLN_BCDE
+                   15 MNL_MFST_PCL_DET
+                   17 PCL_ITM_PROG
+                   19 RET_BCDE_CRS_REF
+                   20 PCL
+                   22 PCL_PROG
+                   24 MFST
+                   28 PCL_IMG
+
+18 rows selected.
+
+
+
+FROM THE MOST - PCL_ID exists (6th Col)
+=============
+
+SQL> select partition_name, num_rows from dba_tab_partitions where table_owner = 'PNET'  and table_name = 'PCL_IMG';
+
+PARTITION_NAME                   NUM_ROWS
+------------------------------ ----------
+-- PCLIMG_PART_201303                6,984,176  DONE
+-- PCLIMG_PART_201508               11,327,165  DONE
+-- PCLIMG_PART_201510               13,696,177  DONE
+-- PCLIMG_PART_201512               17,400,790  DONE
+-- PCLIMG_PART_201601               12,483,193  DONE
+-- PCLIMG_PART_201602               11,399,530  DONE
+-- PCLIMG_PART_201603               12,216,024  DONE
+-- PCLIMG_PART_201604               12,853,242  DONE
+-- PCLIMG_PART_201606               12,695,113  DONE
+-- PCLIMG_PART_201607               12,478,451  DONE
+-- PCLIMG_PART_201608               12,056,729  DONE
+-- PCLIMG_PART_201610               14,094,017  DONE
+-- PCLIMG_PART_201701               13,463,395  DONE
+-- PCLIMG_PART_201702               11,975,002  DONE
+
+
+
+PCL_PROG - PCL_ID exists (col 1)
+========
+
+SQL> select partition_name, num_rows from dba_tab_partitions where table_owner = 'PNET'  and table_name = 'PCL_PROG';
+
+PARTITION_NAME                   NUM_ROWS
+------------------------------ ----------
+-- PNET_PCL_PROG_PART_201401               0
+-- PNET_PCL_PROG_PART_201606       238,500,654  DONE
+-- PNET_PCL_PROG_PART_201608       221,445,426  DONE
+-- PNET_PCL_PROG_PART_201609       235,918,812  DONE
+-- PNET_PCL_PROG_PART_201610       259,666,803  DONE
+-- PNET_PCL_PROG_PART_201611       343,063,460  DONE        <------------ 11.43 million rows PER DAY!
+-- PNET_PCL_PROG_PART_201612       299,235,277  DONE
+-- PNET_PCL_PROG_PART_201701       243,191,412  DONE
+-- PNET_PCL_PROG_PART_201702       197,500,756  DONE        <------------ 6.4 million rows PER DAY!
+
+
+
+
+PCL - PCL_ID exists (col 1)
+===
+
+SQL> select partition_name, num_rows from dba_tab_partitions where table_owner = 'PNET'  and table_name = 'PCL';
+
+PARTITION_NAME                   NUM_ROWS
+------------------------------ ----------
+-- PNET_PCL_PART_201606             21,248,454  DONE
+-- PNET_PCL_PART_201608             18,649,003  DONE
+-- PNET_PCL_PART_201609             20,942,804  DONE
+-- PNET_PCL_PART_201610             22,675,600  DONE
+-- PNET_PCL_PART_201611             32,081,427  DONE
+-- PNET_PCL_PART_201612             29,519,255  DONE
+-- PNET_PCL_PART_201701             22,591,539  DONE
+-- PNET_PCL_PART_201702             17,794,373  DONE
+
+
+
+
+PCL_ITM_PROG - PCL_ID exists (col1)
+============
+
+SQL> select partition_name, num_rows from dba_tab_partitions where table_owner = 'PNET'  and table_name = 'PCL_ITM_PROG';                                                                       
+
+
+PARTITION_NAME                   NUM_ROWS
+------------------------------ ----------
+-- PNET_PCL_IPROG_PART_201608              0  DONE
+-- PNET_PCL_IPROG_PART_201609              0  DONE
+-- PNET_PCL_IPROG_PART_201610              0  DONE
+-- PNET_PCL_IPROG_PART_201611              0  DONE
+-- PNET_PCL_IPROG_PART_201612              0  DONE
+-- PNET_PCL_IPROG_PART_201701              0  DONE
+-- PNET_PCL_IPROG_PART_201702              0  DONE
+
+17 rows selected.
+
+
+MNL_MFST_PCL_DET - PCL_ID exists (col 4)
+================
+
+SQL> select partition_name, num_rows from dba_tab_partitions where table_owner = 'PNET'  and table_name = 'MNL_MFST_PCL_DET';
+
+PARTITION_NAME                   NUM_ROWS
+------------------------------ ----------
+-- PNET_MMFSTPD_PART_201607                0 DONE
+-- PNET_MMFSTPD_PART_201608                0 DONE
+-- PNET_MMFSTPD_PART_201609          515,431 DONE
+-- PNET_MMFSTPD_PART_201611                0 DONE
+-- PNET_MMFSTPD_PART_201612          816,842 DONE
+-- PNET_MMFSTPD_PART_201701        1,039,691 DONE
+-- PNET_MMFSTPD_PART_201702          697,991 DONE
+
+
+
+MFST_PCL_DET - PCL_ID exists - (col 4)
+============
+
+SQL> select partition_name, num_rows from dba_tab_partitions where table_owner = 'PNET'  and table_name = 'MFST_PCL_DET';
+
+PARTITION_NAME                   NUM_ROWS
+------------------------------ ----------
+-- MFST_PCL_DET_201611            29,526,440  DONE
+-- MFST_PCL_DET_201612            30,255,548  DONE
+-- MFST_PCL_DET_201702            17,433,278  DONE
+
+
+
+
+
+TO DROP!!!
+++++++++++
+SQL> select partition_name, num_rows from dba_tab_partitions where table_owner = 'PNET'  and table_name = 'PCL_BCDE_TEST';
+
+PARTITION_NAME                   NUM_ROWS
+------------------------------ ----------
+PNET_BCDE_PART_201709
+PNET_BCDE_PART_201710
+PNET_BCDE_PART_201711
+PPNET_BCDE_PART_201712
+PPNET_BCDE_PART_201801
+PPNET_BCDE_PART_201802
+PPNET_BCDE_PART_201803
+PPNET_BCDE_PART_201804
+
+8 rows selected.
+
+
+PCL_DIVN_DET - PCL_ID exists (col 15)
+============
+
+SQL> select partition_name, num_rows from dba_tab_partitions where table_owner = 'PNET'  and table_name = 'PCL_DIVN_DET';
+
+--------------------
+NOTHING TO DO HERE !
+PCL_ID is always zero.
+--------------------
+
+
+
+
