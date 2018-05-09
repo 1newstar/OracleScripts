@@ -19,7 +19,12 @@ CREATE OR REPLACE package body DBA_USER.pkg_DailyStats as
     -- Date:   19/04/2018
     -- Change: Table F_C2C_C2B_SOS takes forever as it has 82 indices. If this
     --         table is selected for stats gathering, run it as a separate job
-    --         with a higher parallelism. Suggest 8 to begin with.            
+    --         with a higher parallelism. Suggest 4 to begin with.            
+    --
+    -- Author: Norman Dunbar
+    -- Date:   09/05/2018
+    -- Change: Partitions for special tables get the same treatment - they
+    --         can be very large and take "forever" to analyse.
     --====================================================================================
 
     --====================================================================================
@@ -111,15 +116,26 @@ CREATE OR REPLACE package body DBA_USER.pkg_DailyStats as
     --------------------------------------------------------------------------------------
     -- Generate the start of a STATSANALYSE command.
     -- NOTE: We do not wrap the command in BEGIN-END here, that's done later to save PGA.
+    -- 09/05/2018 Partitions for special tables added - starting with degree 4. 
     --------------------------------------------------------------------------------------
     function generateSQL(    
         piOwner in all_tables.owner%type,
         piTable in all_tables.table_name%type
     ) return sql_statement
     is
+        -- Most objects get the default degree of 2, but special tables and partitions
+        -- get an increase.
+        vDegree varchar2(20) := null;
     begin
-        return 'dba_user.pkg_dailystats.statsAnalyse(piOwner => ''' || piOwner || '''' ||
-                                                  ', piTableName => ''' || piTable || '''';
+        -- Special tables need special handling.
+        if (isSpecialTable(piTable)) then
+            vDegree := ', degree => 4';
+        end if;
+
+        return 'dba_user.pkg_dailystats.statsAnalyse(' ||
+                    'piOwner => ''' || piOwner || '''' ||
+                    ', piTableName => ''' || piTable || '''' ||
+                    vDegree;
     end;
 
     --------------------------------------------------------------------------------------
@@ -129,6 +145,8 @@ CREATE OR REPLACE package body DBA_USER.pkg_DailyStats as
     -- 29/03/2018 F_DELIVERY_PARCEL special case added, needs more than 2 degrees.
     -- 19/04/2018 Special tables added. These get submitted one per job as they take
     --            far too long to run in front of other tables - they overrun usually.
+    -- 09/05/2018 Moved special table handling to generateSQL() as we need to cater for
+    --            special tables' partitions too.
     --------------------------------------------------------------------------------------
     function generateTableSQL(    
         piOwner in all_tables.owner%type,
@@ -136,12 +154,6 @@ CREATE OR REPLACE package body DBA_USER.pkg_DailyStats as
     ) return sql_statement
     is
     begin
-        -- Special tables need special handling.
-        if (isSpecialTable(piTable)) then
-            return generateSQL(piOwner, piTable) || ', piObjectType => ''TABLE'', piDegree => 8);';
-        end if;
-
-        -- Normal tables are just, well, normal!
         return generateSQL(piOwner, piTable) || ', piObjectType => ''TABLE'');';
     end;
 
@@ -209,7 +221,7 @@ CREATE OR REPLACE package body DBA_USER.pkg_DailyStats as
             -- 'TRKG' in their names.
             if (vDatabase in  ('RTT','PNET')) then
                 if (x.table_name like '%TRKG%') then
-                    pl(vDatabase || ': Ignoring: ' || x.owner || '.' || x.table_name);
+                    --pl(vDatabase || ': Ignoring: ' || x.owner || '.' || x.table_name);
                     continue;
                 end if;
             end if;
@@ -219,7 +231,7 @@ CREATE OR REPLACE package body DBA_USER.pkg_DailyStats as
             -- above, but was never applied to tables originally, just
             -- partitions and subpartitions. Sticking to old methods!
             if (x.partition_name = 'NO') then
-                pl(vDatabase || ': Ignoring partition ' ||  x.owner || '.' || x.table_name || '.' || x.partition_name);
+                --pl(vDatabase || ': Ignoring partition ' ||  x.owner || '.' || x.table_name || '.' || x.partition_name);
                 continue;
             end if;
             
@@ -248,6 +260,7 @@ CREATE OR REPLACE package body DBA_USER.pkg_DailyStats as
                 -- Add it to the exceptions list for special processing.
                 gStatsSQLExceptions(gStatsSpecialIndex) := vSQL;
                 gStatsSpecialIndex := gStatsSpecialIndex + 1;
+                pl('SPECIAL: ' || vSQL);
                 
                 -- Set the special table(s) detected flag.
                 gSpecialTablesFound := true;
