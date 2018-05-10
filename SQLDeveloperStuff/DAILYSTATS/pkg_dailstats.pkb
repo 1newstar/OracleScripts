@@ -129,7 +129,7 @@ CREATE OR REPLACE package body DBA_USER.pkg_DailyStats as
     begin
         -- Special tables need special handling.
         if (isSpecialTable(piTable)) then
-            vDegree := ', degree => 4';
+            vDegree := ', piDegree => 4';
         end if;
 
         return 'dba_user.pkg_dailystats.statsAnalyse(' ||
