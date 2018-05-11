@@ -826,7 +826,8 @@ CREATE OR REPLACE package body DBA_USER.pkg_DailyStats as
         -- Make sure that the index numbers are consecutive, or carnage will ensue!
         gSpecialTables(0) := 'F_DELIVERY_PARCEL';       -- MISA
         gSpecialTables(1) := 'F_C2C_C2B_SOS';           -- MISA
-        gSpecialTables(2) := 'PCL_PROG';                -- RTT
+        gSpecialTables(2) := 'F_PARCEL_GEN';            -- MISA
+        gSpecialTables(3) := 'PCL_PROG';                -- RTT
 
         -- Build the list of 'pkg_dailyStats.statsAnalyse()' commands.
         -- The list is created in the package global gStatSSQL.

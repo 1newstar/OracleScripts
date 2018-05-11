@@ -18,10 +18,10 @@ grant analyze any to dba_user;
 grant   create job to dba_user; 
 
 -- Create package and package body.
-@@pkg_dailystats.pks
+@@DailyStatsNew.pks
 
 --Create package and package body.
-@@pkg_dailystats.pkb
+@@DailyStatsNew.pkb
 
 -- Let the DBAs use it.
 grant   execute on dba_user.pkg_dailystats
