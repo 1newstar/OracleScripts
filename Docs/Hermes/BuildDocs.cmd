@@ -26,7 +26,7 @@ rem Have to initialise or Windows remembers stuff!
     set RESULT=0
     
     rem Where to find templates.
-    set TEMPLATE_DIR=C:\Users\hisg494\OracleScripts\Docs
+    set TEMPLATE_DIR=C:\Users\hisg494\utilities
 
 rem Get the document name from the command line.
 :get_document_name

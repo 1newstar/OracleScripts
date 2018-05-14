@@ -5,7 +5,7 @@ MISD Courier Parcel Events - Problems
 Introduction
 ============
 
-This job is now taking over one hours to process and as it runs every hour, it is overlapping itself and causing other scheduling problems.
+This job is now taking over one hour to process and as it runs every hour, it is overlapping itself and causing other scheduling problems.
 
 The job is effectively a single INSERT - see `Appendix A <#appendix-a---the-problem-sql-statement>`_ for details - however, it does spend a lot of time logging numerous errors etc, as well as other recursive SQL statements. The job also suffers from Parallel Query downgrading where the requested 32 parallel slaves are being started, then converted to a single sequential query instead. No reason is given in the 'other' column of the execution plan as to why the downgrade took place.
 
