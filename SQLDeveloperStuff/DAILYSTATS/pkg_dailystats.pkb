@@ -25,6 +25,13 @@ CREATE OR REPLACE package body DBA_USER.pkg_DailyStats as
     -- Date:   09/05/2018
     -- Change: Partitions for special tables get the same treatment - they
     --         can be very large and take "forever" to analyse.
+    --
+    -- Author: Norman Dunbar
+    -- Date:   22/05/2018
+    -- Change: Added procedure emergencyAnalyse to list the required commands that would
+    --         have been run by a job that looks to be overrunning ETL3 start time. This
+    --         allows the DBA an easy (easier) way to execute the "held up" commands and
+    --         to get more objects analysed prior to ETL3 starting up.
     --====================================================================================
 
     --====================================================================================
@@ -653,6 +660,96 @@ CREATE OR REPLACE package body DBA_USER.pkg_DailyStats as
     end;
 
     --====================================================================================
+    -- EMERGENCY - STATISTICS GATHERING HAS HUNG AND WILL OVERRUN ETL3.
+    --====================================================================================
+
+    --------------------------------------------------------------------------------------
+    -- A procedure to extract the desired commands to be run for a given daily statistics
+    -- job so that a potential overrun can be averted. Given the job name that is hung or
+    -- running too close to ETL3's start time, this procedure will list the commands that
+    -- need to be run to get as many objects analysed as possible before ETL3 starts.
+    --
+    -- The commands listed will be runnable (copy and paste) and WILL INCLUDE the current
+    -- long running object, so trim wisely!
+    --------------------------------------------------------------------------------------
+    procedure emergencyAnalyse(
+        piStuckJobname in dba_scheduler_jobs.job_name%type := 'DAILYSTATS000'        
+    ) 
+    is
+        vJobName dba_scheduler_jobs.job_name%type;
+        vProcedureName dba_objects.object_name%type;
+
+    begin
+        -- Validate Job name. Must be owned by DBA_USER.
+        begin
+            select  job_name
+            into    vJobName
+            from    dba_scheduler_jobs
+            where   owner = 'DBA_USER'
+            and     job_name = upper(piStuckJobname)    -- Could be a stats job name but...
+            and     job_name like 'DAILYSTATS%';        -- ... this will catch outliers!
+        exception
+            when no_data_found then
+                vJobName := null;
+        end;
+        
+        -- Did we have a job?
+        if (vJobName is null) then
+            dbms_output.put_line(piStuckJobname || 
+                                 ' is either not a DBA_USER scheduled job, or,');
+            dbms_output.put_line(piStuckJobname || 
+                                 ' is not a daily stats job.');
+            return;
+        end if;
+
+        -- It wasn't a special job was it?
+        if (vJobName like 'DAILYSTATSSPECIAL%') then
+            dbms_output.put_line(piStuckJobname || 
+                                 ' is a special daily stats job and runs for some time.');
+            dbms_output.put_line(piStuckJobname || 
+                                 ' - nothing to do here, sorry.');
+            return;
+        end if;
+
+        -- What procedure is called for the job?
+        select  upper(REGEXP_SUBSTR(job_action, '(DailyStatsProc_[[:digit:]]+)', 1, 1, 'i', 1))
+        into    vProcedureName
+        from    dba_scheduler_jobs
+        where   owner = 'DBA_USER'
+        and     job_name = vJobName;
+        
+        -- Do we have a procedure call?
+        if (vProcedureName is null) then
+            dbms_output.put_line(piStuckJobname || 
+                                 ' doesn''t appear to call any daily stats procedure.');
+            return;
+        end if;
+
+        -- What are the calls we make for the procedure? The lines is already ordered by 
+        -- size descending in the procedure source, so we order by that, descending again 
+        -- to get the smallest and thus quickest to execute at the top of the list.
+        --
+        -- NOTE: The object that has "hung" the scheduled job will also be listed and will
+        -- need to be filtered out by the DBA as ane when required.
+        for sourceLine in (select   text
+                           from     dba_source
+                           where    owner = 'DBA_USER'
+                           and      type = 'PROCEDURE'
+                           and      name = vProcedureName
+                           and      text like '%dba_user.pkg_dailystats.statsAnalyse(%'
+                           order    by line desc)
+        loop
+            -- Weird SQL to remove leading and trailing spaces from the source line AFTER
+            -- it has been trimmed of any trailing CR/LF line endings. If there are no CR or LF
+            -- characters, then nothing happens to the data, it's fine as is.
+            dbms_output.put_line('exec ' || 
+                                 trim(trim(trailing chr(13) from 
+                                      trim(trailing chr(10) from sourceLine.text))));
+        end loop;
+        
+    end;
+
+    --====================================================================================
     -- STATISTICS GATHERING.
     --====================================================================================
 
@@ -761,7 +858,7 @@ CREATE OR REPLACE package body DBA_USER.pkg_DailyStats as
         vStatsRecord.id := logStats(piStatsLogRecord => vStatsRecord);
 
         -- Analyse the object. The command will be one or other of the following,
-        -- with CASCADE => TRUE and DEGREE => 2:
+        -- with CASCADE => TRUE and DEGREE => 2 (or higher for special tables):
         --
         -- dbms_stats.gather_table_stats('OWNER', 'TABLE_NAME');
         -- dbms_stats.gather_table_stats('OWNER', 'TABLE_NAME', 'PARTITION_NAME', granularity => 'PARTITION');

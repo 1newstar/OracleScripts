@@ -89,6 +89,11 @@ as
         piCascade in boolean := true,
         piDegree in number := 2
     );
+    
+    -- A procedure to list commands to be run in an emergency to prevent ETL3 overruns.
+    procedure emergencyAnalyse(
+        piStuckJobname in dba_scheduler_jobs.job_name%type := 'DAILYSTATS000'        
+    );
 
     -- A procedure to exclude a username.
     procedure excludeUsername(
