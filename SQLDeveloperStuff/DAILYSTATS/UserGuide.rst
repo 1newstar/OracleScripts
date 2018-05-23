@@ -43,223 +43,195 @@ After installation has been completed, and checked, it may be advisable to execu
     set lines 300 trimspool on trimout on pages 200
     exec dba_user.pkg_dailystats.reportExcludedUsers;
     
-This will display all the users currently excluded from the checks for objects with stale statistics. depending on the database, you may need or wish to add others, or, remove some of the usernames listed. The package contains some user management procedures to carry out those tasks. See `New System - Brief Description <#new-system---brief-description>`_ for details.
+This will display all the users currently *excluded* from the checks for objects with stale statistics - this means that none of the users listed will have statistics gathered for any of their objects, unless done manually in an ad-hoc manner.
+
+Depending on the database, you may need or wish to exclude other users, or to remove some of the usernames listed - the ``pkg_dailyStats`` package contains some user management procedures to carry out those tasks. See below for details.
 
 
-Rolling Back
-------------
+Daily Statistics Gathering
+==========================
 
-Should it be necessary to rollback the new system, and remove it from the database, simply:
-
-1.  Login to the server as your own account, and become the oracle user in the normal manner. Set the appropriate Oracle environment, again in the normal manner.
-1.  Change to the new directory, ``dailystats_install``.
-1.  Connect to SQL*Plus as either your own DBA enabled user or as a SYSDBA enabled user.
-1.  Execute the ``dailystats_rollback.sql`` script. This will uninstall the system.
-1.  Check the ``dailystats_rollback.log`` file for any errors.
-1.  Remove the ``dailystats_*`` scripts from ``/home/oracle/alain``:
-    
-    ..  code-block:: sql
-    
-        rm dailystats_{auto,manual,semi}
-
-Note that the script will not revoke ``CREATE JOB`` from the DBA_USER account as some database had this privilege granted prior to the system being installed.
+Daily statistics is normally started around 06:00, Monday to Friday except bank holidays. However, it merely needs to have completed before the start of ETL3, which is normally around 08:15 to 08:20. In the event of an overrun, the statistics gathering job(s) should be aborted, the log table updated with the details, and the ETL allowed to run. Details on these actions are listed below.
 
 
-New System - Brief Description
-==============================
+Running Stats Jobs
+------------------
 
-A new system has been built, which runs under the privileged user account ``DBA_USER``.  This user exists on all production databases and should have the installation scripts run to create the table and packages required prior to use.
+*   Logon the the primary database server for MISA, PNET and MYHERMES as your own account, and become the oracle user:
 
-There are a number new objects in the system:
+    ..  code-block:: bash
 
-*   Table ``DAILY_STATS_EXCLUSIONS`` which holds a list of all the usernames which will *not* be considered for statistics gathering by the package;
-*   Trigger ``DAILY_STATS_EXCLUSIONS_TRG`` which is used to ensure that the username is in upper case. 
-*   Table ``DAILY_STATS_LOG`` which holds a log of everything analysed in the last 31 days (by default). This table can be house-kept on demand.
-*   Trigger ``DAILY_STATS_LOG_TRG`` to make sure that the ``ID`` column is populated from the sequence ``DAILY_STATS_LOG_SEQ``.
-*   Sequence ``DAILY_STATS_LOG_SEQ`` used by the above trigger to provide a primary key for the table.
-*   Package ``PKG_DAILYSTATS`` which consists of the code required to carry out the statistics gathering. It consists of the following procedures:
-    *   ``StatsControl`` which runs the processes necessary to generate statistics gathering SQL commands and to create procedures and scheduler jobs to execute them. This also will house-keep the ``DAILY_STATS_LOG`` table retaining, by default, only the last 31 days of data.
-    *   ``StatsAnalyse`` which does the analysis of the objects and updates the ``DAILY_STATS_LOG`` logging table.
-    *   ``HousekeepStats`` which allows hose keeping of the old data in the logging table. This defaults to 31 days, but can be changed on the fly as necessary.
-    *   ``ExcludeUsername`` which adds a new user to the exclusions table.
-    *   ``IncludeUsername`` which removes a user from the exclusions table.
-    *   ``ReportExcludedUsers`` which lists the contents of the exclusions table.
+        sudo -iu oracle    
+        cd alain
+        
+    The scripts to run the daily tasks have been installed into the ``alain`` directory, under the ``oracle`` account.
+
+*   Check the Dashboard (`http://axukpremisddb02.int.hlg.de:8080/apex/f?p=106:1:13359801905169::NO::: <http://axukpremisddb02.int.hlg.de:8080/apex/f?p=106:1:13359801905169::NO:::>`_) and make sure that ETL1 and ETL2 have finished "in the green", for today, if not, **do not** start the statistics gathering jobs.
+
+    If the delay is in any way excessive, the daily tasks can be aborted for today, and started again, if all is well, tomorrow.
+
+*   If the ETLs have successfully completed, start the jobs, on all three servers, by running  the following command on each:
+
+    ..  code-block:: bash
+
+        ./dailystats_auto
+        
+    This will analyse the objects that need statistics gathering, and spread them out over a number of separate DBMS_SCHEDULER jobs (MISA only, the other databases get a single job each) with any of the previously identified larger (and thus, long running) objects, getting a separate job to themselves - one large object per additional job. This attempts to spread the load (MISA in the main, but occasionally, PNET also) across the server.
 
     
-DBA_USER Objects
-----------------
+Other job scripts are available as well, these are:
 
-The code runs under the ``DBA_USER`` schema and appropriate privileges have been granted to all DBA users (in the HUK DBA Team) by the installation scripts.
+*   ``dailystats_semi`` which creates and submits the same jhobs as above, but does not enable them. At the end of the output from the script, will be a list of the required commands to activate the jobs, at the DBA's leisure.
 
-
-Table: DAILY_STATS_EXCLUSIONS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This is a table consisting of one column, ``USERNAME``, which is also the primary key. It *should* contain all the Oracle supplied, or Hermes specific, usernames which are not to be considered for gathering of statistics no matter how stale. All the Oracle users such as SYS, SYSTEM, MDSYS etc will (or should) be found here as they should never have statistics gathered during the limited time we have available on a daily basis.
-
-There is a trigger attached to INSERT or UPDATE operations on the table, and this simply makes sure that the username is always in upper case when written to the table.
-
-There are three procedures in the package ``PKG_DAILYSTATS`` which manipulate this table:
-
-*   ``ExcludeUsername`` which adds a new username to the table, thus excluding it from any further statistics gathering by the system.
-*   ``IncludeUsername`` which removes an existing username from the table, thus including it in statistics gathering by the system.
-*   ``ReportExcludedUsers`` which reports on the username currently excluded.
+*   ``dailystats_manual`` which simply lists the commands that are required to be executed, by the DBA, in order to analyse the objects requiring fresh statistics. This is somewhat equivalent to the old, now superceded, manual system.
 
 
-Trigger: DAILY_STATS_EXCLUSIONS_TRG
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This trigger is associated with the above table, and on INSERT or UPDATE actions, will ensure that the data supplied are in upper case.
-
-
-Table: DAILY_STATS_LOG
-~~~~~~~~~~~~~~~~~~~~~~
-
-This table is used to record the outcome of the statistics gathering exercise for the various objects involved. Any errors that occur will be logged here as well as the start and end date & time for the gathering.
-
-There is a trigger associated with this table to ensure that the ID column is always populated by a number from a sequence. 
-
-The table is house-kept by the ``StatsControl`` procedure and by default, keeps 31 days worth of data. This means that the sequence used to populate the ``ID`` column can cycle, and does so after reaching 999,999,999.
-
-The table can be house-kept on demand by running the ``HousekeepStats`` procedure with a suitable value for the number of days to retain.
-
-
-Trigger: DAILY_STATS_LOG_TRG
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This trigger is associated with the above table, and on INSERT actions, will ensure that the ``ID`` columns has a valid value.
-
-
-Sequence: DAILY_STATS_LOG_SEQ
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Used by the above trigger to populate the ``ID`` column in the ``DAILY_STATS_LOG`` table.
-
-
-Package: PKG_DAILYSTATS
-~~~~~~~~~~~~~~~~~~~~~~~
-
-This package holds all the code for the new system. There are procedures to:
-
-*   Report on the statistics which need to be gathered;
-*   To gather the required statistics;
-*   Carry out maintenance of the ``DAILY_STATS_EXCLUSIONS`` table.
-*   Carry out maintenance of the ``DAILY_STATS_LOG`` table.
-
-The DBA users have been granted execute access on this package, but *not* to any of the underlying objects, so using the package (ok, or logging in directly as DBA_USER, or SYS) is the only way to use the new system.
-
-If the system is processing MISA, then the package (specification) defines the maximum number of jobs that can be submitted concurrently to gather statistics. If there are more objects that the defined maximum number of jobs, then the objects will be spread over the requisite number of jobs, otherwise, a single job will be created and submitted. Jobs will be named ``DailyStats_000`` through ``DailyStats_nnn`` where 'nnn' is one less than the configured setting for the maximum number of allowed jobs. Each job executes a single procedure named ``DailyStatsProc_nnn`` where 'nnn' corresponds to the job number.
-
-In an effort to spread the load across all the jobs, the selected objects are sorted into descending order of the number of blocks in the objects (table, partition or subpartition). Once the full list is known, the various tasks (ie, one object requiring analysis) are 'load balanced' by 'dealing' one task to each of the jobs in turn until all tasks have been 'dealt' and all the jobs have a 'hand' of tasks. (Card game analogy sort of works!). 
-
-If the system is processing MYHERMES or RTT (aka PNET) databases, then all the commands will be executed in a single scheduler job named ``DailyStats_000`` which calls a procedure ``DailyStatsProc_000`` to do the actual work.
-
-
-New System - Usage
-==================
-
-To use the new system to gather statistics, follow the following instructions.
-
-1.  Login to the database server as your own user, as normal.
-1.  Become the Oracle user in the normal manner.
-1.  Set the Oracle environment as per the required database. (Only MISA, RTT/PNET or MYHERMES at present.
-1.  Change to the 'alain' directory (``/home/oracle/alain``)
-1.  You now have three options in running scripts:
-    1.  ``./dailystats_manual`` will act as the old system and simply display the commands that you should execute.
-    1.  ``./dailystats_auto`` will generate the various tasks to be executed, and execute them automatically for you.
-    1.  ``./dailystats_semi`` will generate the various tasks, and will submit a number of jobs under the DBMS_SCHEDULER, as user DBA_USER, but the jobs will not be enabled. The DBA can enable them in turn and have them execute.
-    
-
-Technical Description
-=====================
-
-The installed package, ``DBA_USER.PKG_DAILYSTATS``, exposes a single control procedure, ``statsControl``, an analysis procedure ``StatsAnalyse`` to do the actual analysis and logging of details, three user maintenance procedures, ``includeUsername``, ``excludeUsername`` and ``reportExcludedUsers``, and one house keeping procedure, ``HousekeepStats`` to tidy the ``DAILY_STATS_LOG`` table. 
-
-Procedure: StatsControl
+Monitoring Running Jobs
 -----------------------
 
-This is the top level procedure in the system. It can be used to produce a report which lists the commands required to bring statistics up to date, or to actually execute all the commands required. If the commands are to be executed, it will do this as a single "online" session for databases MYHERMES and RTT/PNET only. For MISA, the work is always done in "batch" mode by submitting scheduler jobs, as necessary. The number of jobs can be configured, but the default is 18.
-
-The procedure requires three parameters:
-
-*   ``piDatabase`` - the database name. Only MISA, RTT, PNET or MYHERMES are allowed. This should match up to the appropriate database on the server where you are running the code, otherwise some additional tables may have statistics gathered where they are not needed. RTT (aka PNET) does not analyse tables with 'TRKG' in their name, the others will.
-
-*   ``piDisplayOnly`` - specifies whether the commands are to be generated & displayed only, or to be executed. Allowable values are true or false. The default, if not specified is false.
-
-*   ``piEnableJobs`` - specified whether the collection of DBMS_SCHEDULER jobs are to be enabled - and therefore executed - or not. The default, if not specified, is false - meaning that jobs created will not be enabled and will therefore not execute until enabled by the DBA. Set this to true if you wish to have the jobs submitted and enabled, for immediate execution.
-
-
-Gathering Statistics
-~~~~~~~~~~~~~~~~~~~~
-
-Fully Automatic Method
-""""""""""""""""""""""
-
-To generate the required SQL commands, and to execute them, proceed as follows, using MISA as an example database:
+You can monitor the jobs, which run under the Oracle Scheduler, by checking for any "Jnnn" session in SQLDeveloper's (or Toad's Monitor Sessions utility). The ACTION column will tell you what is being gathered at that point. The MODULE will, unfortunately, be "DBMS_SCHEDULER".
 
 ..  code-block:: sql
 
-    set serverout on size unlimited
-    exec dba_user.pkg_dailystats.statsControl(piDatabase = 'MISA', piDisplayOnly => false, piEnableJobs => true);
-   
-This is what the script ``dailystats_auto`` carries out on your behalf. All jobs created will be submitted, enabled and will execute on submission. The jobs thus created will remain present in the database until the next run of the new system. This allows the run logs to be checked for errors.
+    select program, module, action
+    from v$session
+    where program like '%J___)';
 
-You may, if desired, leave out the ``piDisplayOnly => false`` parameter as this defaults to false anyway, but it's better to leave it in to be explicit.
+The ACTION column will show you what is happening:
 
-As of 23/04/2018, large tables get special treatment in that they get a bigger parallelism and get submitted as a job by themselves. This was necessary as some of the bigger tables were causing overruns on the MISA and PNET databases. The job and procedure names will be ``DAILYSTATSSPECIALnnn`` and ``DAILYSTATSSPECIALPROC_nnn`` 
+*   **T:ttttt** = Table ttttt is being analysed.
+*   **P:ppppp** = Partition ppppp is being analysed. Unfortunately, there's no space to have the table name as well.
+*   **S:sssss** = Sub-Partition sssss is being analysed. Unfortunately, there's no space to have the table name as well.
 
 
-Semi-Automatic Method
-"""""""""""""""""""""
+ETL3 OverRuns
+-------------
+
+Because the size of the objects being analysed varies from huge to very huge, there are occasions when a large object (these are analysed first) may take far too long and will probably overrun the ETL3 start time. This means that the job will need to be aborted, and this will leave all the other objects queued up behind the large one, unanalysed.
+
+To alleviate this, a procedure exists named `emergencyAnalyse`` which will, if given the name of the long running job, list all the commands that are within that job. These can be executed by the DBA manually, in order that as many objects as possible get analysed before the long running job is aborted.
+
+To execute this, proceed as follows:
+
+..  code-block:: sql
+
+    begin
+        dbms_output.enable(9e6);
+        dba_user.pkg_dailystats.emergencyAnalyse('DailyStats001');
+    end;
     
-If, on the other hand, the DBA wishes to have the jobs created and submitted, but *not automatically* executed, then the commands to run are:
+The output will resemble the following:
 
 ..  code-block:: sql
 
-    set serverout on size unlimited
-    exec dba_user.pkg_dailystats.statsControl(piDatabase = 'MISA', piDisplayOnly => false, piEnableJobs => false);
+    exec dba_user.pkg_dailystats.statsAnalyse(piOwner => 'HERMES_MI_STAGE', piTableName => 'S_PCL_PROG_MIS_HOLD_TMP', piObjectType => 'TABLE');
+    exec dba_user.pkg_dailystats.statsAnalyse(piOwner => 'HERMES_MI_STAGE', piTableName => 'S_BVDR_TOTAL_DIRECT', piObjectType => 'TABLE');
+    exec dba_user.pkg_dailystats.statsAnalyse(piOwner => 'HERMES_MI_STAGE', piTableName => 'S_C2C_ORDER_NO_PCL', piObjectType => 'TABLE');
+    exec dba_user.pkg_dailystats.statsAnalyse(piOwner => 'HERMES_MI_STAGE', piTableName => 'S_PCLSHP_RET_EVT', piObjectType => 'TABLE');
+    ...
 
-This is what the script ``dailystats_semi`` carries out on your behalf. All jobs created will be submitted, but disabled,  and will not execute on submission. The jobs thus created will remain present in the database until the DBA manually enables each one, whereupon it will execute. Once again, the jobs will remain in the scheduler until next run of the new system.
+The commands are listed in order of increasing object size, so the top ones should run quicker than the bottom ones, so running the commands in order (in batches perhaps?) will get a larger number of objects analysed while the large object is hogging all the resources in the actual scheduler job.
 
-You may, if desired, leave out the ``piDisplayOnly => false`` parameter as this defaults to false anyway, but it's better to leave it in to be explicit.
+**NOTE**: The large object that is currently taking too much time is also listed, and the DBA should avoid starting another analysis of that object, or any that appear after it in the listing, as those are all already completed. (Except for the running  one of course!)
 
-As of 23/04/2018, large tables get special treatment in that they get a bigger parallelism and get submitted as a job by themselves. This was necessary as some of the bigger tables were causing overruns on the MISA and PNET databases. The job and procedure names will be ``DAILYSTATSSPECIALnnn`` and ``DAILYSTATSSPECIALPROC_nnn`` 
-  
+On Statistics Job Completion
+----------------------------
 
-Manual Method
-"""""""""""""
+After all the jobs have completed, let everyone know that the statistics job has completed, or been aborted - see below, as necessary. Send an email to *huk.dba* to inform them that the jobs have finished, and the time of the latest database to finish running its jobs. (This will usually always be PNET or MISA as MYHERMES only ever runs for about a minute or three!)
+
+
+Some Useful Scripts
+===================
+
+The DBA may find the following scripts useful.
+
+
+Checking End Time
+-----------------
+
+The time at which the final object completed it statistics gathering can be ascertained by running:
 
 ..  code-block:: sql
 
-    set serverout on size unlimited
-    exec dba_user.pkg_dailystats.statsControl(piDatabase = 'MISA', piDisplayOnly => true, piEnableJobs => false);
+    select max(endtime) from dba_user.daily_stats_log;
 
-This is what the script ``dailystats_manual`` carries out on your behalf. No jobs will be created created and no commands will be executed. The various commands required to gather statistics manually, will be generated and displayed on screen. It is the responsibility of the DBA to ensure that they are subsequently executed, somehow.
 
-You may, if desired, leave out the ``piEnableJobs => false`` parameter as this defaults to false anyway, but it's better to leave it in to be explicit.
+Checking For Errors
+-------------------
 
-In the old system, the commands generated were calls to ``DBMS_STATS.GATHER_TABLE_STATS``, but the new system makes calls similar to the following:
+If you look at  the status of the scheduled jobs, they all show SUCCEEDED. This is true *even* if errors were detected. So:
 
 ..  code-block:: sql
 
-    BEGIN dba_user.pkg_dailystats.statsAnalyse(piOwner => 'MYHERMES', piTableName => 'RFND_PYMT', piObjectType => 'TABLE'); end;
-  
-By calling the named package, details of the start time, end time and any errors that occurred can be logged to the ``DAILY_STATS_LOG`` table.
+    select t.*,(t.endtime - t.starttime) * 60*60*24 as seconds
+    from dba_user.daily_stats_log t
+    where error_message is not null
+    and starttime > trunc(sysdate)
+    order by table_name;
 
-As of 23/04/2018, large tables get special treatment in that they get a bigger parallelism. This was necessary as some of the bigger tables were causing overruns on the MISA and PNET databases when running in automatic or semi-automatic mode.
+Will list any objects that had errors during the analysis.
+
+
+Checking Results
+----------------
+
+The following query will list all of today's work, and the length of time taken to analyse that particular object.
+
+..  code-block:: sql
+
+    select t.*,(t.endtime - t.starttime) * 60*60*24 as seconds
+    from dba_user.daily_stats_log t
+    where starttime > trunc(sysdate)
+    order by table_name;
+
     
+
+Abort All Running Statistics Jobs
+---------------------------------
+
+Find the running jobs that are gathering stats, and create SQL statements to abort them:
+
+..  code-block:: sql
+
+    select 'exec dbms_scheduler.stop_job(''DBA_USER.' || job_name || ''', force => true);'
+    from dba_scheduler_jobs
+    where owner = 'DBA_USER'
+    and state = 'RUNNING'
+    and job_name like 'DAILYSTATS%'
+    order by job_name;
+
+Whatever SQL is generated will need to be executed to force stop *all* the running jobs.
+
+This will leave the stats for the tables being analysed in an "unknown" state. It appears that the first thing Oracle does when analysing a table, is to delete the current stats. This is probably not an ideal situation to be in, so aborting stats gathering jobs should be considered an action of last resort.
+
+  
+After Aborting
+--------------
+
+Regardless of which abort method you use, you will need to update the logging table with details of the abort. Every object that gets analysed has a start time, end time and error message columns in the logging table. If the job is aborted, there is no error message and no end time.
+
+Run the following script to add an error message:
+
+..  code-block:: sql
+
+    update dba_user.daily_stats_log
+    set error_message = 'ABORTED' 
+    where endtime is null;
+
+    commit;
+
     
 User Maintenance
-----------------
+================
 
 Certain user accounts should not be considered for statistics gathering. These include, but are not limited to, the various accounts supplied by Oracle and the Hermes DBAs, BO users etc.
 
-The ``PKG_DAILYSTATS`` package, has a number of procedures built in to allow these users to be included or excluded from the daily statistics gathering. These are described below.
+The ``pkg_dailystats`` package, has a number of procedures built in to allow these users to be included or excluded from the daily statistics gathering. These are described below.
 
 In the following examples, the usernames supplied to the packaged procedures can be in upper, lower or mixed case. They will be converted to uppercase for processing.
 
 ExcludeUsername
-~~~~~~~~~~~~~~~
+---------------
 
 This procedure adds a username to the exclusions table so that it's tables etc *will not* be considered for statistics gathering by the new system. A user is added thus:
 
@@ -271,7 +243,7 @@ This procedure adds a username to the exclusions table so that it's tables etc *
 The procedure will report back whether or not the username has been added to the table. If the username already existed in the table, no errors will be raised.
 
 Example
-"""""""
+~~~~~~~
 
 ..  code-block:: sql
 
@@ -290,7 +262,7 @@ Example
     
     
 IncludeUsername
-~~~~~~~~~~~~~~~
+---------------
 
 This procedure removes a username from the exclusions table so that its tables etc *will* now be considered for statistics gathering by the new system. A user is removed as follows:
 
@@ -302,7 +274,7 @@ This procedure removes a username from the exclusions table so that its tables e
 The procedure will report back whether or not the username has been removed from the table. If the username didn't already exist on the table, no errors will be raised.
 
 Example
-"""""""
+~~~~~~~
 
 ..  code-block:: sql
 
@@ -321,7 +293,7 @@ Example
     
 
 ReportExcludedUsers
-~~~~~~~~~~~~~~~~~~~
+-------------------
 
 This procedure lists the contents of the exclusions table.
 
@@ -331,9 +303,9 @@ This procedure lists the contents of the exclusions table.
     exec dba_user.pkg_dailystats.reportExcludedUsers;
     
 Example
-"""""""
+~~~~~~~
 
-..  code-block:: sql
+..  code-block:: none
 
     set serverout on size unlimited
     exec dba_user.pkg_dailystats.reportExcludedUsers;
@@ -348,401 +320,3 @@ Example
     XS$NULL is excluded from the dba_users.pkg_dailyStats processing.
     
    
-
-System Messages
-===============
-
-In the table of messages below, these abbreviations are used:
-
-+-----------+-------------------+
-| Abbrev    | Description       |
-+===========+===================+
-| PPPP      | Procedure name    |
-+-----------+-------------------+
-| JJJJ      | Job name          |
-+-----------+-------------------+
-| DDDD      | Database Name     |
-+-----------+-------------------+
-| UUUU      | User/account name |
-+-----------+-------------------+
-| EEEE      | Oracle error text |
-+-----------+-------------------+
-
-..  NORM:   You need a paragraph between tables to prevent them merging.
-
-Error Messages
---------------
-
-In addition to the specific messages in the tables below, the SQL error which caused the problem, and a back trace of the PL/SQL call stack showing how the system got to the error, will normally be displayed where appropriate..
-
-+------------------------------------+-----------------------------------+
-| Message                            | Reason, description etc           |
-+====================================+===================================+
-| MisaProcBuilder(): EEEE            | The MisaProcBuilder procedure     |
-|                                    | failed with error EEEE. Previous  |
-|                                    | messages will detail exactly what |
-|                                    | happened.                         |
-+------------------------------------+-----------------------------------+
-| HousekeepStats(): EEEE             | The HousekeepStats procedure      |
-|                                    | failed with error EEEE.           |
-+------------------------------------+-----------------------------------+
-| EXECUTING: SQL Statement           | The statistics are being gathered |
-|                                    | for an object as per the SQL      |
-|                                    | Statement listed.                 |
-+------------------------------------+-----------------------------------+
-|| StatsAnalyse(): EEEE              | The StatsAnalyse procedure failed |
-|| FAILED: SQL Statement             | with error EEEE while analysing   |
-|                                    | an object using the SQL listed.   |
-+------------------------------------+-----------------------------------+
-| StatsControl(): EEEE               | The StatsControl procedure failed |
-|                                    | with error EEEE. This will be     |
-|                                    | followed by a stack trace.        |
-+------------------------------------+-----------------------------------+
-| LOGSTATS(INSERT) : EEEE            | The LogStats procedure failed     |
-|                                    | with error EEEE while inserting a |
-|                                    | new row.                          |
-+------------------------------------+-----------------------------------+
-| LOGSTATS(UPDATE ID = NNN) : EEEE   | The LogStats procedure failed     |
-|                                    | with error EEEE while updating a  |
-|                                    | row with the ID shown.            |
-+------------------------------------+-----------------------------------+
-| CreateProcedure(): EEEE            | The CreateProcedure procedure     |
-|                                    | failed with error EEEE while      |
-|                                    | creating a new procedure.         |
-+------------------------------------+-----------------------------------+
-| ProcedureBuilder(): EEEE           | The ProcedureBuilder procedure    |
-|                                    | failed with error EEEE while      |
-|                                    | creating a new procedure's source |
-|                                    | code.                             |
-+------------------------------------+-----------------------------------+
-| Failed to create one or more       | Self explanatory message. Follows |
-| procedures.                        | the procedureBuilder one above.   |
-+------------------------------------+-----------------------------------+
-| MISA: Creating nnn procedures      | Self explanatory message.         |
-| and jobs.                          |                                   |
-+------------------------------------+-----------------------------------+
-| MISA: Creating 1 (only) procedure  | Self explanatory message.         |
-| and job.                           |                                   |
-+------------------------------------+-----------------------------------+
-|| Creating Procedure/Job: PPPP/JJJJ | The creation worked.              |
-|| Created.                          |                                   |
-+------------------------------------+-----------------------------------+
-|| Creating Procedure/Job: PPPP/JJJJ | The creation failed.              |
-|| FAILED.                           |                                   |
-+------------------------------------+-----------------------------------+
-
-
-Informational Messages
-----------------------
-
-+-----------------------------------+-----------------------------------+
-| Message                           | Reason, description etc           |
-+===================================+===================================+
-| There is/are nnn objects(s) with  | Output when it is known how many  |
-| stale statistics.                 | objects have state statistics.    |
-+-----------------------------------+-----------------------------------+
-| JJJJ - old job successfully       | Yesterday's scheduler job JJJJ    |
-| dropped from scheduler.           | has been removed prior to         |
-|                                   | creating today's scheduler job.   |
-|                                   | MISA only.                        |
-+-----------------------------------+-----------------------------------+
-| JJJJ created and submitted for    | Today's scheduler job, JJJJ, has  |
-| immediate execution.              | been created and submitted.       |
-|                                   |                                   |
-+-----------------------------------+-----------------------------------+
-| JJJJ created and submitted but    | Today's scheduler job, JJJJ, has  |
-| execution is suspended until      | been created and submitted but not|
-| enabled.                          | enabled.                          |
-+-----------------------------------+-----------------------------------+
-| ``exec DBMS_SCHEDULER.ENABLE(     | This command will enable the new  |
-|      'DBA_USER.JJJJ');``          | job that is currently disabled.   |
-+-----------------------------------+-----------------------------------+
-| Database name 'DDDD' is           | Database name is incorrect or not |
-| incorrect. MISA, MYHERMES, RTT or | supplied.                         |
-| PNET only.                        |                                   |
-+-----------------------------------+-----------------------------------+
-| DDDD nothing to do today.         | Output when there are no SQL      |
-|                                   | statements generated to analyse   |
-|                                   | objects.                          |
-+-----------------------------------+-----------------------------------+
-| DDDD: Ignoring partition          | A partition named 'NO' is being   |
-| owner.table_name.NO.              | ignored on the named table.       |
-+-----------------------------------+-----------------------------------+
-| DDDD: Ignoring owner.tablename.   | RTT/PNET table name has 'TRKG' in |
-|                                   | it's name and is being ignored.   |
-+-----------------------------------+-----------------------------------+
-
-
-User Maintenance Messages
--------------------------
-
-+-----------------------------------+-----------------------------------+
-| Message                           | Reason, description etc           |
-+===================================+===================================+
-| UUUU has been added to the        | User UUUU will no longer be       |
-| exclusions table.                 | considered for statistics         |
-|                                   | gathering.                        |
-+-----------------------------------+-----------------------------------+
-| UUUU already existed on the       | Self explanatory, informational   |
-| exclusions table.                 | message.                          |
-+-----------------------------------+-----------------------------------+
-| UUUU was not found on the         | Self explanatory, informational   |
-| exclusions table.                 | message.                          |
-+-----------------------------------+-----------------------------------+
-| UUUU has been removed from the    | User UUUU will be considered for  |
-| exclusions table.                 | statistics gathering.             |
-+-----------------------------------+-----------------------------------+
-| UUUU is excluded from the         | Message output by the procedure   |
-| dba_user.pkg_dailyStats           | ``reportExcludedUsers``.          |
-| processing.                       |                                   |
-+-----------------------------------+-----------------------------------+
-
-
-Appendix A - MISA: Current System
-=================================
-
-Because of the size of MISA and the large number of tables, partitions and subpartitions that normally require a refresh of their statistics, the processing for MISA is normally done in 10 separate database sessions.
-
-Groups of commands are collected from the following scripts' output, and pasted into each of the 10 sessions. Once one (or more) have finished processing, then another group of commands is pasted in for processing.
-
-Tables
-------
-
-The following SQL statement will identify those tables which require statistics gathering, and, will generate the necessary SQL:
-
-..  code-block:: sql
-
-    select 'EXEC DBMS_STATS.GATHER_TABLE_STATS ('''||owner
-                                                   ||''','''
-                                                   ||table_name
-                                                   ||''');' cmd
-    from dba_tab_statistics
-    where table_name not like 'BIN$%' -- recycle stuff
-    -- and owner = 'HERMES_MI_STAGE'
-    -- and owner = 'ECHO_EDW'
-    -- and owner = 'ECHO_DW_STAGE'
-    -- and owner = 'C2C'
-    -- and last_analyzed < sysdate -4
-       and stale_stats <> 'NO'
-       and object_type = 'TABLE'
-    -- and table_name = 'A_NETWORK_ENTRY'
-       and owner not in ('SYS','SYSTEM','SYSMAN','DBSNMP','OLAPSYS','XDB','WMSYS','OWBSYS','OWF_MGR','EXFSYS','OUTLN','CTXSYS','MDSYS','OLAPSYS','ORDSYS','SYSADMIN')
-    -- order by 1,2,3, last_analyzed desc
-       order by owner, table_name;
-
-Partitions
-----------
-
-The following SQL statement will identify those partitions which require statistics gathering, and, will generate the necessary SQL:
-
-..  code-block:: sql
-
-    select 'EXEC DBMS_STATS.GATHER_TABLE_STATS ('''||owner
-                                                   ||''','''
-                                                   ||table_name
-                                                   ||''','''
-                                                   ||partition_name
-                                                   ||''',GRANULARITY => '''
-                                                   ||'PARTITION'
-                                                   ||''');' cmd
-    from dba_tab_statistics
-    where table_name not like 'BIN$%' -- remove recyclebin stuff
-    and stale_stats = 'YES'
-    and partition_name <> 'NO'
-    and object_type = 'PARTITION'
-    and owner not in ('SYS','SYSTEM','SYSMAN','DBSNMP','OLAPSYS','XDB','WMSYS','OWBSYS','OWF_MGR','EXFSYS','OUTLN','CTXSYS','MDSYS','OLAPSYS','ORDSYS','SYSADMIN')
-    order by owner,
-             table_name,
-             partition_name;
-
-SubPartitions
--------------
-
-The following SQL statement will identify those subpartitions which require statistics gathering, and, will generate the necessary SQL:
-
-..  code-block:: sql
-
-    select 'EXEC DBMS_STATS.GATHER_TABLE_STATS ('''||owner
-                                                   ||''','''
-                                                   ||table_name
-                                                   ||''','''
-                                                   ||SUBpartition_name
-                                                   ||''',GRANULARITY => '''
-                                                   ||'SUBPARTITION'
-                                                   ||''');' cmd
-    from dba_tab_statistics
-    where table_name not like 'BIN$%' -- remove recyclebin stuff
-    and stale_stats = 'YES'
-    and partition_name <> 'NO'
-    and object_type = 'SUBPARTITION'
-    and owner not in ('SYS','SYSTEM','SYSMAN','DBSNMP','OLAPSYS','XDB','WMSYS','OWBSYS','OWF_MGR','EXFSYS','OUTLN','CTXSYS','MDSYS','OLAPSYS','ORDSYS','SYSADMIN')
-    order by owner,
-             table_name,
-             partition_name;
-
-
-Appendix B - RTT/PNET: Current System
-=====================================
-
-
-Tables
-------
-
-The following SQL statement will identify those tables which require statistics gathering, and, will generate the necessary SQL:
-
-..  code-block:: sql
-
-    select 'EXEC DBMS_STATS.GATHER_TABLE_STATS ('''||owner
-                                                   ||''','''
-                                                   ||table_name
-                                                   ||''');' cmd
-    from dba_tab_statistics
-    where table_name not like 'BIN$%' -- recycle stuff
-    and table_name not like '%TRKG%'
-    -- and owner = 'HERMES_MI_STAGE'
-    -- and owner = 'ECHO_EDW'
-    -- and owner = 'ECHO_DW_STAGE'
-    -- and owner = 'C2C'
-    -- and last_analyzed < sysdate -4
-    and stale_stats <> 'NO'
-    and object_type = 'TABLE'
-    -- and table_name = 'A_NETWORK_ENTRY'
-    and owner not in ('SYS','SYSTEM','SYSMAN','DBSNMP','OLAPSYS','XDB','WMSYS','OWBSYS','OWF_MGR','EXFSYS','OUTLN','CTXSYS','MDSYS','OLAPSYS','ORDSYS','SYSADMIN')
-    -- order by 1,2,3, last_analyzed desc
-    order by owner, table_name;
-
-Partitions
-----------
-
-The following SQL statement will identify those partitions which require statistics gathering, and, will generate the necessary SQL:
-
-..  code-block:: sql
-
-    select 'EXEC DBMS_STATS.GATHER_TABLE_STATS ('''||owner
-                                                   ||''','''
-                                                   ||table_name
-                                                   ||''','''
-                                                   ||partition_name
-                                                   ||''',GRANULARITY => '''
-                                                   ||'PARTITION'
-                                                   ||''');' cmd
-    from dba_tab_statistics
-    where table_name not like 'BIN$%' -- remove recyclebin stuff
-    and table_name not like '%TRKG%'
-    and stale_stats = 'YES'
-    and partition_name <> 'NO'
-    and object_type = 'PARTITION'
-    and owner not in ('SYS','SYSTEM','SYSMAN','DBSNMP','OLAPSYS','XDB','WMSYS','OWBSYS','OWF_MGR','EXFSYS','OUTLN','CTXSYS','MDSYS','OLAPSYS','ORDSYS','SYSADMIN')
-    order by owner,
-             table_name,
-             partition_name;
-
-SubPartitions
--------------
-
-The following SQL statement will identify those subpartitions which require statistics gathering, and, will generate the necessary SQL:
-
-..  code-block:: sql
-
-    select 'EXEC DBMS_STATS.GATHER_TABLE_STATS ('''||owner
-                                                   ||''','''
-                                                   ||table_name
-                                                   ||''','''
-                                                   ||SUBpartition_name
-                                                   ||''',GRANULARITY => '''
-                                                   ||'SUBPARTITION'
-                                                   ||''');' cmd
-    from dba_tab_statistics
-    where table_name not like 'BIN$%' -- remove recyclebin stuff
-    and table_name not like '%TRKG%'
-    and stale_stats = 'YES'
-    and partition_name <> 'NO'
-    and object_type = 'SUBPARTITION'
-    and owner not in ('SYS','SYSTEM','SYSMAN','DBSNMP','OLAPSYS','XDB','WMSYS','OWBSYS','OWF_MGR','EXFSYS','OUTLN','CTXSYS','MDSYS','OLAPSYS','ORDSYS','SYSADMIN')
-    order by owner,
-             table_name,
-             partition_name;
-
-
-Appendix C - MYHERMES: Current System
-=====================================
-
-
-Tables
-------
-
-The following SQL statement will identify those tables which require statistics gathering, and, will generate the necessary SQL:
-
-..  code-block:: sql
-
-    select 'EXEC DBMS_STATS.GATHER_TABLE_STATS ('''||owner
-                                                   ||''','''
-                                                   ||table_name
-                                                   ||''');' cmd
-    from dba_tab_statistics
-    where table_name not like 'BIN$%' -- recycle stuff
-    -- and owner = 'HERMES_MI_STAGE'
-    -- and owner = 'ECHO_EDW'
-    -- and owner = 'ECHO_DW_STAGE'
-    -- and owner = 'C2C'
-    -- and last_analyzed < sysdate -4
-       and stale_stats <> 'NO'
-       and object_type = 'TABLE'
-    -- and table_name = 'A_NETWORK_ENTRY'
-       and owner not in ('SYS','SYSTEM','SYSMAN','DBSNMP','OLAPSYS','XDB','WMSYS','OWBSYS','OWF_MGR','EXFSYS','OUTLN')
-    -- order by 1,2,3, last_analyzed desc
-       order by owner, table_name;
-
-Partitions
-----------
-
-The following SQL statement will identify those partitions which require statistics gathering, and, will generate the necessary SQL:
-
-..  code-block:: sql
-
-    select 'EXEC DBMS_STATS.GATHER_TABLE_STATS ('''||owner
-                                                   ||''','''
-                                                   ||table_name
-                                                   ||''','''
-                                                   ||partition_name
-                                                   ||''',GRANULARITY => '''
-                                                   ||'PARTITION'
-                                                   ||''');' cmd
-    from dba_tab_statistics
-    where table_name not like 'BIN$%' -- remove recyclebin stuff
-    and stale_stats = 'YES'
-    and partition_name <> 'NO'
-    and object_type = 'PARTITION'
-    and owner not in ('SYS','SYSTEM','SYSMAN','DBSNMP','OLAPSYS','XDB','WMSYS','OWBSYS','OWF_MGR','EXFSYS','OUTLN')
-    order by owner,
-             table_name,
-             partition_name;
-
-SubPartitions
--------------
-
-The following SQL statement will identify those subpartitions which require statistics gathering, and, will generate the necessary SQL:
-
-..  code-block:: sql
-
-    select 'EXEC DBMS_STATS.GATHER_TABLE_STATS ('''||owner
-                                                   ||''','''
-                                                   ||table_name
-                                                   ||''','''
-                                                   ||SUBpartition_name
-                                                   ||''',GRANULARITY => '''
-                                                   ||'SUBPARTITION'
-                                                   ||''');' cmd
-    from dba_tab_statistics
-    where table_name not like 'BIN$%' -- remove recyclebin stuff
-    and stale_stats = 'YES'
-    and partition_name <> 'NO'
-    and object_type = 'SUBPARTITION'
-    and owner not in ('SYS','SYSTEM','SYSMAN','DBSNMP','OLAPSYS','XDB','WMSYS','OWBSYS','OWF_MGR','EXFSYS','OUTLN')
-    order by owner,
-             table_name,
-             partition_name;
-
-
-
-
