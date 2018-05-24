@@ -45,13 +45,13 @@ After installation has been completed, and checked, it may be advisable to execu
     
 This will display all the users currently *excluded* from the checks for objects with stale statistics - this means that none of the users listed will have statistics gathered for any of their objects, unless done manually in an ad-hoc manner.
 
-Depending on the database, you may need or wish to exclude other users, or to remove some of the usernames listed - the ``pkg_dailyStats`` package contains some user management procedures to carry out those tasks. See below for details.
+Depending on the database, you may need or wish to exclude other users, or to remove some of the usernames listed - the ``pkg_dailyStats`` package contains some user management procedures to carry out those tasks. See `User Maintenance <#user-maintenance>`_ below, for details.
 
 
 Daily Statistics Gathering
 ==========================
 
-Daily statistics is normally started around 06:00, Monday to Friday except bank holidays. However, it merely needs to have completed before the start of ETL3, which is normally around 08:15 to 08:20. In the event of an overrun, the statistics gathering job(s) should be aborted, the log table updated with the details, and the ETL allowed to run. Details on these actions are listed below.
+Daily statistics is normally started around 06:00, Monday to Friday except bank holidays. However, it merely needs to have completed before the start of ETL3, which is normally around 08:15 to 08:20. In the event of an overrun, the statistics gathering job(s) should be aborted, the log table updated with the details, and the ETL allowed to run. Details on these actions are listed below in the section on `ETL3 Overruns <#etl3-overruns>`_.
 
 
 Running Stats Jobs
@@ -109,7 +109,7 @@ ETL3 OverRuns
 
 Because the size of the objects being analysed varies from huge to very huge, there are occasions when a large object (these are analysed first) may take far too long and will probably overrun the ETL3 start time. This means that the job will need to be aborted, and this will leave all the other objects queued up behind the large one, unanalysed.
 
-To alleviate this, a procedure exists named `emergencyAnalyse`` which will, if given the name of the long running job, list all the commands that are within that job. These can be executed by the DBA manually, in order that as many objects as possible get analysed before the long running job is aborted.
+To alleviate this, a procedure exists named ``emergencyAnalyse`` which will, if given the name of the long running job, list all the commands that are within that job. These can be executed by the DBA manually, in order that as many objects as possible get analysed before the long running job is aborted.
 
 To execute this, proceed as follows:
 
@@ -120,7 +120,7 @@ To execute this, proceed as follows:
         dba_user.pkg_dailystats.emergencyAnalyse('DailyStats001');
     end;
     
-The output will resemble the following:
+The output will resemble the following, with each command on a single line:
 
 ..  code-block:: sql
 
@@ -132,12 +132,23 @@ The output will resemble the following:
 
 The commands are listed in order of increasing object size, so the top ones should run quicker than the bottom ones, so running the commands in order (in batches perhaps?) will get a larger number of objects analysed while the large object is hogging all the resources in the actual scheduler job.
 
-**NOTE**: The large object that is currently taking too much time is also listed, and the DBA should avoid starting another analysis of that object, or any that appear after it in the listing, as those are all already completed. (Except for the running  one of course!)
+    **NOTE**: The large object that is currently taking too much time is also listed, and the DBA should avoid starting another analysis of that object, or any that appear after it in the listing, as those are all already completed. (Except for the running  one of course!)
+
+The DBA should attempt to execute as many of the listed commands as possible *before* the start of ETL3. Once ETL3 does begin, the long running analysis job should be aborted. To abort a long running job, run the following command, substituting the actual job name as appropriate. Letter case is significant in the job name, it should be upper case.
+
+..  code-block:: sql
+
+    exec dbms_scheduler.stop_job('DBA_USER.DAILYSTATSnnn', force => true);
+
+
+It should also be aborted if the DBA has executed all the commands listed, apart from the long running one obviously, and then found that the scheduled job has finished analysing the large object and moved on to the remainder. However, if the ETL3 start time has not yet been reached, the scheduled job *could* be allowed to continue to completion. The DBA should be in a position to consider how long it may take to complete once the large object has been done and should use discretion to decide whether or not to allow the scheduled job to run on. 
+
+If a job has been aborted, the logging table *must* be updated as per `After Aborting <#after-aborting>`_ below.
 
 On Statistics Job Completion
 ----------------------------
 
-After all the jobs have completed, let everyone know that the statistics job has completed, or been aborted - see below, as necessary. Send an email to *huk.dba* to inform them that the jobs have finished, and the time of the latest database to finish running its jobs. (This will usually always be PNET or MISA as MYHERMES only ever runs for about a minute or three!)
+After all the jobs have completed, let everyone know that the statistics job has completed, or been aborted. Send an email to *huk.dba* to inform them that the jobs have finished/aborted, and the time of the latest database to finish running its jobs. This will usually always be PNET or MISA as MYHERMES only ever runs for about a few tens of seconds.
 
 
 Some Useful Scripts
@@ -184,12 +195,17 @@ The following query will list all of today's work, and the length of time taken 
     where starttime > trunc(sysdate)
     order by table_name;
 
+If you need to see what took longest, change the last line above to the following:
+
+..  code-block:: sql
+
+    order by seconds desc;
     
 
 Abort All Running Statistics Jobs
 ---------------------------------
 
-Find the running jobs that are gathering stats, and create SQL statements to abort them:
+Find the running jobs that are gathering statistics, and create SQL statements to abort them:
 
 ..  code-block:: sql
 
@@ -202,13 +218,13 @@ Find the running jobs that are gathering stats, and create SQL statements to abo
 
 Whatever SQL is generated will need to be executed to force stop *all* the running jobs.
 
-This will leave the stats for the tables being analysed in an "unknown" state. It appears that the first thing Oracle does when analysing a table, is to delete the current stats. This is probably not an ideal situation to be in, so aborting stats gathering jobs should be considered an action of last resort.
+This will leave the statistics for the tables being analysed in an "unknown" state. It appears that the first thing Oracle does when analysing a table, is to delete the current statistics. This is probably not an ideal situation to be in, so aborting statistics gathering jobs should be considered an action of last resort.
 
   
 After Aborting
 --------------
 
-Regardless of which abort method you use, you will need to update the logging table with details of the abort. Every object that gets analysed has a start time, end time and error message columns in the logging table. If the job is aborted, there is no error message and no end time.
+After aborting a scheduled job, you will need to update the logging table with details of the abort. Every object that gets analysed has a start time, end time and error message columns in the logging table. If the job is aborted, there is no error message and no end time.
 
 Run the following script to add an error message:
 
@@ -233,7 +249,7 @@ In the following examples, the usernames supplied to the packaged procedures can
 ExcludeUsername
 ---------------
 
-This procedure adds a username to the exclusions table so that it's tables etc *will not* be considered for statistics gathering by the new system. A user is added thus:
+This procedure adds a username to the exclusions table so that its objects *will not* be considered for statistics gathering by the new system. A user is added thus:
 
 ..  code-block:: sql
 
@@ -264,7 +280,7 @@ Example
 IncludeUsername
 ---------------
 
-This procedure removes a username from the exclusions table so that its tables etc *will* now be considered for statistics gathering by the new system. A user is removed as follows:
+This procedure removes a username from the exclusions table so that its objects *will* now be considered for statistics gathering by the new system. A user is removed as follows:
 
 ..  code-block:: sql
 
