@@ -51,7 +51,11 @@ Depending on the database, you may need or wish to exclude other users, or to re
 Daily Statistics Gathering
 ==========================
 
-Daily statistics is normally started around 06:00, Monday to Friday except bank holidays. However, it merely needs to have completed before the start of ETL3, which is normally around 08:15 to 08:20. In the event of an overrun, the statistics gathering job(s) should be aborted, the log table updated with the details, and the ETL allowed to run. Details on these actions are listed below in the section on `ETL3 Overruns <#etl3-overruns>`_.
+Daily statistics gathering is normally started around 06:00, Monday to Friday except bank holidays, however, it needs to have been started *after* ETL1 and ETL2 have completed, and must be completed *before* the start of ETL3, which is normally around 08:15 to 08:20. In the event of an overrun, the statistics gathering job(s) should be aborted, the log table updated with the details, and the ETL allowed to run. Details on these actions are listed below in the section on `ETL3 Overruns <#etl3-overruns>`_.
+
+The statistics are only able to be gathered on the currently running primary database server(s). It appears that there is no ability to execute these scripts on the standby servers, so if (when?) we ever switch over to the standby servers, there may be problems. The ``/home/oracle/alain`` folder, for example, does not exist on any of the standby servers.
+
+The conclusion from this, and some other observations, is that we are not really prepared for databases or servers to fail and require switch-over or fail-over to the standby.
 
 
 Running Stats Jobs
@@ -66,9 +70,13 @@ Running Stats Jobs
         
     The scripts to run the daily tasks have been installed into the ``alain`` directory, under the ``oracle`` account.
 
-*   Check the Dashboard (`http://axukpremisddb02.int.hlg.de:8080/apex/f?p=106:1:13359801905169::NO::: <http://axukpremisddb02.int.hlg.de:8080/apex/f?p=106:1:13359801905169::NO:::>`_) and make sure that ETL1 and ETL2 have finished "in the green", for today, if not, **do not** start the statistics gathering jobs.
+*   Check the Dashboard (`http://axukpremisddb02.int.hlg.de:8080/apex/f?p=106:1:13359801905169::NO::: <http://axukpremisddb02.int.hlg.de:8080/apex/f?p=106:1:13359801905169::NO:::>`_) and make sure that ETL1 and ETL2 have completed for today, if not, **do not** start the statistics gathering jobs.
 
-    If the delay is in any way excessive, the daily tasks can be aborted for today, and started again, if all is well, tomorrow.
+    If there is an amber highlight for either ETL1 or ETL2, then this indicates that the ETL is still executing. **Do not** start the statistics gathering tasks for today.
+
+    If there is a red highlight for either ETL1 or ETL2, then this indicates that a failure occurred within the processing. It may still be possible to start the daily statistics gathering jobs, but you are advised to check the emails, especially those from *Ian Jepson*, to be absolutely certain that the ETL(s) did indeed complete processing after whatever caused the errors was resolved.
+    
+    If the ETL processing has not yet completed, or if the delay is in any way excessive and is approaching ETL3 start time, the daily statistics tasks can be aborted for today.
 
 *   If the ETLs have successfully completed, start the jobs, on all three servers, by running  the following command on each:
 
@@ -81,7 +89,7 @@ Running Stats Jobs
     
 Other job scripts are available as well, these are:
 
-*   ``dailystats_semi`` which creates and submits the same jhobs as above, but does not enable them. At the end of the output from the script, will be a list of the required commands to activate the jobs, at the DBA's leisure.
+*   ``dailystats_semi`` which creates and submits the same jobs as above, but does not enable them. At the end of the output from the script, will be a list of the required commands to activate the jobs, at the DBA's leisure.
 
 *   ``dailystats_manual`` which simply lists the commands that are required to be executed, by the DBA, in order to analyse the objects requiring fresh statistics. This is somewhat equivalent to the old, now superceded, manual system.
 
