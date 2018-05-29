@@ -3,6 +3,9 @@
 *.zip
 *.xls
 *.docx
+*.doc
+*.pdf
+
 Toad Stuff/*.lst
 Toad Stuff/*.log
 Docs/sources/*.docx
